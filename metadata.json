@@ -1,0 +1,6 @@
+{
+  "name": "Namaste Siam Indian Kitchen",
+  "description": "Premium contemporary Indian & Thai kitchen restaurant menu with live search, chef recommendations, and interactive dish modal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
