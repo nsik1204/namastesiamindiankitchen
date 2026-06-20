@@ -7,8 +7,34 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import AdminLoginForm from './components/admin/AdminLoginForm';
 
 export default function App() {
-  const { isAdminMode, setAdminMode } = useAdminAuth();
-  const [isLoginOpen, setIsLoginOpen] = useState<boolean>(false);
+  const { isAdminMode } = useAdminAuth();
+  const [currentPath, setCurrentPath] = useState<string>(window.location.pathname);
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    // Intercept pushState/replaceState so routing is reactive even within SPA
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+    
+    window.history.pushState = function(...args) {
+      originalPushState.apply(this, args);
+      handleLocationChange();
+    };
+    
+    window.history.replaceState = function(...args) {
+      originalReplaceState.apply(this, args);
+      handleLocationChange();
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    return () => {
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+      window.removeEventListener('popstate', handleLocationChange);
+    };
+  }, []);
 
   // Centralized data states
   const [dishes, setDishes] = useState<Dish[]>([]);
@@ -200,23 +226,7 @@ export default function App() {
     await MenuService.saveGalleryItems(updated);
   };
 
-  if (isAdminMode && restaurantInfo && aboutInfo) {
-    return (
-      <AdminDashboard
-        dishes={dishes}
-        categories={categories}
-        restaurantInfo={restaurantInfo}
-        aboutInfo={aboutInfo}
-        gallery={gallery}
-        onUpdateDishes={handleUpdateDishes}
-        onUpdateRestaurantInfo={handleUpdateRestaurantInfo}
-        onUpdateAboutInfo={handleUpdateAboutInfo}
-        onUpdateCategories={handleUpdateCategories}
-        onUpdateGallery={handleUpdateGallery}
-        onClose={() => setAdminMode(false)}
-      />
-    );
-  }
+  // Removed old instant admin mode check. Router-based rendering handles admin area under /admin
 
   // Guard loading state gracefully if critical info has not resolved from services yet
   if (!restaurantInfo || !aboutInfo || categories.length === 0) {
@@ -228,6 +238,45 @@ export default function App() {
         </div>
       </div>
     );
+  }
+
+  const isAdminPath = currentPath === '/admin' || currentPath === '/admin/';
+
+  if (isAdminPath) {
+    if (isAdminMode) {
+      return (
+        <AdminDashboard
+          dishes={dishes}
+          categories={categories}
+          restaurantInfo={restaurantInfo}
+          aboutInfo={aboutInfo}
+          gallery={gallery}
+          onUpdateDishes={handleUpdateDishes}
+          onUpdateRestaurantInfo={handleUpdateRestaurantInfo}
+          onUpdateAboutInfo={handleUpdateAboutInfo}
+          onUpdateCategories={handleUpdateCategories}
+          onUpdateGallery={handleUpdateGallery}
+          onClose={() => {
+            window.history.pushState({}, '', '/');
+          }}
+        />
+      );
+    } else {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-[#FFF8F0]" style={{ color: 'var(--orange)' }}>
+          <div className="relative w-full max-w-[420px] mx-auto px-4 py-8">
+            <AdminLoginForm
+              onSuccess={() => {
+                // Successfully validated. Context updates isAdminMode.
+              }}
+              onCancel={() => {
+                window.history.pushState({}, '', '/');
+              }}
+            />
+          </div>
+        </div>
+      );
+    }
   }
 
   return (
@@ -629,17 +678,6 @@ export default function App() {
                   Terms
                 </button>
               </li>
-              <li style={{ marginTop: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsLoginOpen(true)}
-                  className="hover:text-orange-400 transition-colors text-left text-orange-300 font-mono text-xs"
-                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                  id="foot-btn-staff"
-                >
-                  [ Staff Login ]
-                </button>
-              </li>
             </ul>
           </div>
         </div>
@@ -693,27 +731,6 @@ export default function App() {
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* STAFF PORTAL LOGIN MODAL */}
-      <div
-        id="staffLoginModal"
-        className={`modal ${isLoginOpen ? 'open' : ''}`}
-        aria-hidden={!isLoginOpen}
-        onClick={(e) => {
-          if (e.target instanceof HTMLElement && e.target.id === 'staffLoginModal') {
-            setIsLoginOpen(false);
-          }
-        }}
-      >
-        <div className="relative w-full max-w-[420px] mx-auto px-3" id="staff-modal-container">
-          <AdminLoginForm
-            onSuccess={() => {
-              setIsLoginOpen(false);
-            }}
-            onCancel={() => setIsLoginOpen(false)}
-          />
         </div>
       </div>
 
