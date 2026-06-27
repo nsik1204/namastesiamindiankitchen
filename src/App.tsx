@@ -5,6 +5,7 @@ import DishCard from './components/DishCard';
 import { useAdminAuth } from './context/AdminAuthContext';
 import AdminDashboard from './components/admin/AdminDashboard';
 import AdminLoginForm from './components/admin/AdminLoginForm';
+import { getSupabaseClient } from './services/supabaseClient';
 
 export default function App() {
   const { isAdminMode } = useAdminAuth();
@@ -82,6 +83,98 @@ export default function App() {
     };
   }, []);
 
+  // Setup Supabase Realtime subscriptions to listen to updates made on other/connected devices
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'foods' },
+        async (payload) => {
+          console.log('Realtime update: foods table changed', payload);
+          try {
+            const allDishes = await MenuService.getDishes();
+            setDishes(allDishes);
+          } catch (err) {
+            console.error('Failed to reload dishes on realtime event:', err);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'categories' },
+        async (payload) => {
+          console.log('Realtime update: categories table changed', payload);
+          try {
+            const cats = await MenuService.getCategories();
+            setCategories(cats);
+          } catch (err) {
+            console.error('Failed to reload categories on realtime event:', err);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'gallery' },
+        async (payload) => {
+          console.log('Realtime update: gallery table changed', payload);
+          try {
+            const items = await MenuService.getGalleryItems();
+            setGallery(items);
+          } catch (err) {
+            console.error('Failed to reload gallery on realtime event:', err);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'restaurant_info' },
+        async (payload) => {
+          console.log('Realtime update: restaurant_info table changed', payload);
+          try {
+            const info = await MenuService.getRestaurantInfo();
+            setRestaurantInfo(info);
+          } catch (err) {
+            console.error('Failed to reload restaurant info on realtime event:', err);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_settings' },
+        async (payload) => {
+          console.log('Realtime update: chat_settings table changed', payload);
+          try {
+            const info = await MenuService.getRestaurantInfo();
+            setRestaurantInfo(info);
+          } catch (err) {
+            console.error('Failed to reload chat settings on realtime event:', err);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'about_info' },
+        async (payload) => {
+          console.log('Realtime update: about_info table changed', payload);
+          try {
+            const about = await MenuService.getAboutInfo();
+            setAboutInfo(about);
+          } catch (err) {
+            console.error('Failed to reload about info on realtime event:', err);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   // Keyboard shortcut listener to close any active modal with 'Escape'
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -145,17 +238,33 @@ export default function App() {
       .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
   }, [gallery]);
 
-  // Filtered popular and favorites for nested sections
+  // Filtered popular and favorites for nested sections with dedicated display orders
   const popularFiltered = useMemo(() => {
-    return filteredDishes.filter(d => popularDishes.some(p => p.id === d.id));
-  }, [filteredDishes, popularDishes]);
+    const q = searchQuery.trim().toLowerCase();
+    return dishes
+      .filter(d => d.bestseller && d.active !== false && (activeCategory === 'all' || d.category === activeCategory))
+      .filter(d => {
+        if (!q) return true;
+        const searchable = `${d.name} ${d.description} ${d.category} ${d.ingredients.join(' ')}`.toLowerCase();
+        return searchable.includes(q);
+      })
+      .sort((a, b) => (a.display_order_popular || 0) - (b.display_order_popular || 0));
+  }, [dishes, activeCategory, searchQuery]);
 
   const favoritesFiltered = useMemo(() => {
-    return filteredDishes.filter(d => customerFavorites.some(f => f.id === d.id));
-  }, [filteredDishes, customerFavorites]);
+    const q = searchQuery.trim().toLowerCase();
+    return dishes
+      .filter(d => d.customerFavorite && d.active !== false && (activeCategory === 'all' || d.category === activeCategory))
+      .filter(d => {
+        if (!q) return true;
+        const searchable = `${d.name} ${d.description} ${d.category} ${d.ingredients.join(' ')}`.toLowerCase();
+        return searchable.includes(q);
+      })
+      .sort((a, b) => (a.display_order_favorite || 0) - (b.display_order_favorite || 0));
+  }, [dishes, activeCategory, searchQuery]);
 
-  // Popular section fallbacks to all matching if no specifically popular item matches the category
-  const popularDishesToRender = popularFiltered.length > 0 ? popularFiltered : filteredDishes;
+  // Remove fallback that silently changes ordering
+  const popularDishesToRender = popularFiltered;
 
   // Handler for custom search click button
   const handleLiveSearchClick = () => {

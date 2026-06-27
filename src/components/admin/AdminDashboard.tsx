@@ -151,7 +151,10 @@ export default function AdminDashboard({
     await new Promise(r => setTimeout(r, 600));
 
     if (editingDish) {
-      const updated = dishes.map(d => d.id === editingDish.id ? { ...d, ...dishForm } as Dish : d);
+      let updated = dishes.map(d => d.id === editingDish.id ? { ...d, ...dishForm } as Dish : d);
+      if (dishForm.todaySpecial) {
+        updated = updated.map(d => d.id === editingDish.id ? d : { ...d, todaySpecial: false });
+      }
       onUpdateDishes(updated);
       showToast(`Dish "${dishForm.name}" updated successfully!`);
       setEditingDish(null);
@@ -167,7 +170,11 @@ export default function AdminDashboard({
         display_order_popular: dishForm.display_order_popular || nextOrder,
         display_order_favorite: dishForm.display_order_favorite || nextOrder
       } as Dish;
-      onUpdateDishes([newDish, ...dishes]);
+      let updated = [newDish, ...dishes];
+      if (dishForm.todaySpecial) {
+        updated = updated.map(d => d.id === nextId ? d : { ...d, todaySpecial: false });
+      }
+      onUpdateDishes(updated);
       showToast(`Dish "${dishForm.name}" added to menu successfully!`);
     }
 
@@ -630,7 +637,17 @@ export default function AdminDashboard({
   const handleTogglePromoOnDish = (dishId: number, flag: 'todaySpecial' | 'chefSpecial' | 'bestseller' | 'customerFavorite') => {
     const updated = dishes.map(d => {
       if (d.id === dishId) {
-        return { ...d, [flag]: !d[flag] };
+        const nextVal = !d[flag];
+        if (flag === 'todaySpecial' && nextVal) {
+          return { ...d, [flag]: true };
+        }
+        return { ...d, [flag]: nextVal };
+      }
+      if (flag === 'todaySpecial') {
+        const isEnablingTarget = !dishes.find(item => item.id === dishId)?.[flag];
+        if (isEnablingTarget) {
+          return { ...d, todaySpecial: false };
+        }
       }
       return d;
     });
