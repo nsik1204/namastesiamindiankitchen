@@ -36,7 +36,8 @@ async function adminApiFetch(endpoint: string, body: any): Promise<void> {
 function getLocalOrStatic<T>(key: string, defaultValue: T): T {
   try {
     const item = localStorage.getItem(`namaste_siam_${key}`);
-    return item ? JSON.parse(item) : defaultValue;
+    const parsed = item ? JSON.parse(item) : null;
+    return parsed ? parsed : defaultValue;
   } catch {
     return defaultValue;
   }
