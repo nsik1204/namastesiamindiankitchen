@@ -2,6 +2,37 @@ import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from '../types
 import { DISHES, CATEGORIES, RESTAURANT_INFO, ABOUT_INFO, GALLERY } from '../data';
 import { getSupabaseClient } from './supabaseClient';
 
+async function generateDeviceFingerprint(): Promise<string> {
+  const nav = window.navigator;
+  const screen = window.screen;
+  const str = `${nav.userAgent}-${nav.language}-${screen.colorDepth}-${screen.width}x${screen.height}-${new Date().getTimezoneOffset()}`;
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function adminApiFetch(endpoint: string, body: any): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return;
+  const fingerprint = await generateDeviceFingerprint();
+  const res = await fetch(`/api/admin/${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      'X-Device-Fingerprint': fingerprint
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    throw new Error('Admin API error: ' + res.statusText);
+  }
+}
+
 function getLocalOrStatic<T>(key: string, defaultValue: T): T {
   try {
     const item = localStorage.getItem(`namaste_siam_${key}`);
@@ -161,63 +192,11 @@ export const MenuService = {
    */
   async saveRestaurantInfo(info: RestaurantInfo): Promise<void> {
     setLocal('restaurant_info', info);
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-
     try {
-      // 1. Save restaurant core profile
-      const { data: infoRows } = await supabase.from('restaurant_info').select('id').limit(1);
-      const infoId = infoRows?.[0]?.id;
-
-      if (infoId) {
-        await supabase.from('restaurant_info').update({
-          name: info.name,
-          address: info.address,
-          phone: info.phone,
-          opening_hours: info.openingHours,
-          instagram: info.instagram,
-          website: info.website,
-          dining_style: info.diningStyle,
-          updated_at: new Date().toISOString()
-        }).eq('id', infoId);
-      } else {
-        await supabase.from('restaurant_info').insert([{
-          name: info.name,
-          address: info.address,
-          phone: info.phone,
-          opening_hours: info.openingHours,
-          instagram: info.instagram,
-          website: info.website,
-          dining_style: info.diningStyle
-        }]);
-      }
-
-      // 2. Save chat active settings
-      const { data: chatRows } = await supabase.from('chat_settings').select('id').limit(1);
-      const chatId = chatRows?.[0]?.id;
-
-      if (chatId) {
-        await supabase.from('chat_settings').update({
-          whatsapp_number: info.whatsappNumber || '',
-          whatsapp_default_message: info.whatsappMessage || '',
-          line_id: info.lineId || '',
-          line_qr_url: info.lineQrUrl || '',
-          contact_active_channel: info.contactActiveChannel || 'both',
-          updated_at: new Date().toISOString()
-        }).eq('id', chatId);
-      } else {
-        await supabase.from('chat_settings').insert([{
-          whatsapp_number: info.whatsappNumber || '',
-          whatsapp_default_message: info.whatsappMessage || '',
-          line_id: info.lineId || '',
-          line_qr_url: info.lineQrUrl || '',
-          contact_active_channel: info.contactActiveChannel || 'both'
-        }]);
-      }
-
-      console.log('Saved restaurant info to Supabase successfully.');
+      await adminApiFetch('save-restaurant-info', { info });
+      console.log('Saved restaurant info to Supabase via API successfully.');
     } catch (err) {
-      console.error('Supabase error in saveRestaurantInfo:', err);
+      console.error('API error in saveRestaurantInfo:', err);
     }
   },
 
@@ -266,28 +245,11 @@ export const MenuService = {
    */
   async saveAboutInfo(about: AboutInfo): Promise<void> {
     setLocal('about_info', about);
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-
     try {
-      const { data: rows } = await supabase.from('about_info').select('id').limit(1);
-      const rowId = rows?.[0]?.id;
-
-      if (rowId) {
-        await supabase.from('about_info').update({
-          story_paragraphs: about.story,
-          highlights: about.highlights,
-          updated_at: new Date().toISOString()
-        }).eq('id', rowId);
-      } else {
-        await supabase.from('about_info').insert([{
-          story_paragraphs: about.story,
-          highlights: about.highlights
-        }]);
-      }
-      console.log('Saved about_info to Supabase successfully.');
+      await adminApiFetch('save-about-info', { info: about });
+      console.log('Saved about_info to Supabase via API successfully.');
     } catch (err) {
-      console.error('Supabase error in saveAboutInfo:', err);
+      console.error('API error in saveAboutInfo:', err);
     }
   },
 
@@ -347,9 +309,6 @@ export const MenuService = {
    */
   async saveCategories(cats: Category[]): Promise<void> {
     setLocal('categories', cats);
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-
     try {
       const realCats = cats.filter(c => c.id !== 'all');
       
@@ -366,11 +325,11 @@ export const MenuService = {
       }));
 
       if (upsertRows.length > 0) {
-        await supabase.from('categories').upsert(upsertRows, { onConflict: 'id' });
+        await adminApiFetch('save-categories', { categories: upsertRows });
       }
-      console.log('Saved categories to Supabase successfully.');
+      console.log('Saved categories to Supabase via API successfully.');
     } catch (err) {
-      console.error('Supabase error in saveCategories:', err);
+      console.error('API error in saveCategories:', err);
     }
   },
 
@@ -446,19 +405,7 @@ export const MenuService = {
    */
   async saveDishes(allDishes: Dish[]): Promise<void> {
     setLocal('dishes', allDishes);
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-
     try {
-      // 1. Delete dishes omitted in modern dashboard
-      const ids = allDishes.map(d => d.id).filter(id => id > 0);
-      if (ids.length > 0) {
-        await supabase.from('foods').delete().not('id', 'in', ids);
-      } else {
-        await supabase.from('foods').delete().neq('id', 0);
-      }
-
-      // 2. Map and upsert newest values
       const rows = allDishes.map(d => {
         const mapped: any = {
           slug: d.slug || generateSlug(d.name),
@@ -491,12 +438,10 @@ export const MenuService = {
         return mapped;
       });
 
-      if (rows.length > 0) {
-        await supabase.from('foods').upsert(rows);
-      }
-      console.log('Saved dishes to Supabase successfully.');
+      await adminApiFetch('save-dishes', { dishes: rows });
+      console.log('Saved dishes to Supabase via API successfully.');
     } catch (err) {
-      console.error('Supabase error in saveDishes:', err);
+      console.error('API error in saveDishes:', err);
     }
   },
 
@@ -558,13 +503,7 @@ export const MenuService = {
    */
   async saveGalleryItems(items: GalleryItem[]): Promise<void> {
     setLocal('gallery', items);
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-
     try {
-      // Re-populate order cleanly
-      await supabase.from('gallery').delete().neq('image_url', '');
-
       const rows = items.map((item, idx) => ({
         title: item.title || item.alt || '',
         image_url: item.image,
@@ -577,12 +516,10 @@ export const MenuService = {
         updated_at: new Date().toISOString()
       }));
       
-      if (rows.length > 0) {
-        await supabase.from('gallery').insert(rows);
-      }
-      console.log('Saved gallery items to Supabase successfully.');
+      await adminApiFetch('save-gallery', { gallery: rows });
+      console.log('Saved gallery items to Supabase via API successfully.');
     } catch (err) {
-      console.error('Supabase error in saveGalleryItems:', err);
+      console.error('API error in saveGalleryItems:', err);
     }
   }
 };
