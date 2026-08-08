@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { MenuService } from './services/menuService';
+import { RESTAURANT_INFO, ABOUT_INFO, CATEGORIES, DISHES, GALLERY } from './data';
 import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from './types';
 import DishCard from './components/DishCard';
 import { useAdminAuth } from './context/AdminAuthContext';
@@ -74,6 +75,13 @@ export default function App() {
         }
       } catch (err) {
         console.error('Failed to load menu info dynamically:', err);
+        if (active) {
+          setRestaurantInfo(RESTAURANT_INFO);
+          setAboutInfo(ABOUT_INFO);
+          setCategories(CATEGORIES);
+          setDishes(DISHES);
+          setGallery(GALLERY);
+        }
       }
     }
     loadData();
@@ -337,7 +345,7 @@ export default function App() {
   // Removed old instant admin mode check. Router-based rendering handles admin area under /admin
 
   // Guard loading state gracefully if critical info has not resolved from services yet
-  if (!restaurantInfo || !aboutInfo || categories.length === 0) {
+  if (!restaurantInfo || !aboutInfo) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FFF8F0]" style={{ color: 'var(--orange)' }}>
         <div className="text-center font-sans">
