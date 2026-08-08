@@ -4,7 +4,6 @@ import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from './types'
 import DishCard from './components/DishCard';
 import { useAdminAuth } from './context/AdminAuthContext';
 import AdminDashboard from './components/admin/AdminDashboard';
-import AdminLoginForm from './components/admin/AdminLoginForm';
 import { getSupabaseClient } from './services/supabaseClient';
 
 export default function App() {
@@ -372,17 +371,9 @@ export default function App() {
       );
     } else {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-[#FFF8F0]" style={{ color: 'var(--orange)' }}>
-          <div className="relative w-full max-w-[420px] mx-auto px-4 py-8">
-            <AdminLoginForm
-              onSuccess={() => {
-                // Successfully validated. Context updates isAdminMode.
-              }}
-              onCancel={() => {
-                window.history.pushState({}, '', '/');
-              }}
-            />
-          </div>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-white text-gray-800">
+          <h1 className="text-4xl font-bold mb-4">Page Not Found</h1>
+          <p className="text-lg">The requested page could not be found.</p>
         </div>
       );
     }

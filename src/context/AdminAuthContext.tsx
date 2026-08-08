@@ -15,12 +15,48 @@ interface AdminAuthContextType {
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
+const ALLOWED_ADMIN_EMAIL = 'YOUR_EMAIL_HERE';
+
+async function generateDeviceFingerprint(): Promise<string> {
+  const nav = window.navigator;
+  const screen = window.screen;
+  const str = `${nav.userAgent}-${nav.language}-${screen.colorDepth}-${screen.width}x${screen.height}-${new Date().getTimezoneOffset()}`;
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdminMode, setAdminMode] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+
+  const verifyDevice = async (email: string): Promise<boolean> => {
+    if (email !== ALLOWED_ADMIN_EMAIL) return false;
+    const supabase = getSupabaseClient();
+    if (!supabase) return false;
+    
+    try {
+      const fingerprint = await generateDeviceFingerprint();
+      const { data, error } = await supabase
+        .from('admin_devices')
+        .select('fingerprint')
+        .eq('email', email)
+        .eq('fingerprint', fingerprint)
+        .eq('is_active', true)
+        .single();
+        
+      if (error || !data) return false;
+      return true;
+    } catch (err) {
+      console.error('Device verification failed:', err);
+      return false;
+    }
+  };
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -30,11 +66,16 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Load active session on mount securely (Supabase handles local persistence automatically)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setIsAuthenticated(true);
-        setAdminMode(true);
-        setUserEmail(session.user.email || null);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user?.email) {
+        const isDeviceValid = await verifyDevice(session.user.email);
+        if (isDeviceValid) {
+          setIsAuthenticated(true);
+          setAdminMode(true);
+          setUserEmail(session.user.email);
+        } else {
+          await supabase.auth.signOut();
+        }
       }
       setLoading(false);
     }).catch((err) => {
@@ -43,11 +84,19 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     });
 
     // Listen for authentication changes automatically
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setIsAuthenticated(true);
-        setAdminMode(true);
-        setUserEmail(session.user.email || null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user?.email) {
+        const isDeviceValid = await verifyDevice(session.user.email);
+        if (isDeviceValid) {
+          setIsAuthenticated(true);
+          setAdminMode(true);
+          setUserEmail(session.user.email);
+        } else {
+          await supabase.auth.signOut();
+          setIsAuthenticated(false);
+          setAdminMode(false);
+          setUserEmail(null);
+        }
       } else {
         setIsAuthenticated(false);
         setAdminMode(false);
@@ -62,6 +111,10 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setLoginError(null);
+    if (email !== ALLOWED_ADMIN_EMAIL) {
+      return { success: false, error: 'Unauthorized.' };
+    }
+
     const supabase = getSupabaseClient();
     if (!supabase) {
       const errMessage = 'Supabase keys are missing. Please complete setup in administrative secrets.';
@@ -80,7 +133,13 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: error.message };
       }
 
-      if (data.session) {
+      if (data.session?.user?.email) {
+        const isDeviceValid = await verifyDevice(data.session.user.email);
+        if (!isDeviceValid) {
+          await supabase.auth.signOut();
+          return { success: false, error: 'Unauthorized device.' };
+        }
+
         setIsAuthenticated(true);
         setAdminMode(true);
         setUserEmail(data.user?.email || null);
@@ -96,45 +155,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    setLoginError(null);
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      const errMessage = 'Supabase keys are missing. Please complete setup in administrative secrets.';
-      setLoginError(errMessage);
-      return { success: false, error: errMessage };
-    }
-
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) {
-        setLoginError(error.message);
-        return { success: false, error: error.message };
-      }
-
-      if (data.user) {
-        if (data.session) {
-          setIsAuthenticated(true);
-          setAdminMode(true);
-          setUserEmail(data.user.email || null);
-          return { success: true };
-        } else {
-          return { 
-            success: true, 
-            error: 'Registration successful! Verification email sent (if enabled). Please verify and sign in.' 
-          };
-        }
-      }
-
-      return { success: false, error: 'Registration failed.' };
-    } catch (err: any) {
-      const errMsg = err?.message || 'Unknown registration error occurred.';
-      setLoginError(errMsg);
-      return { success: false, error: errMsg };
-    }
+    setLoginError('Public registration is disabled.');
+    return { success: false, error: 'Public registration is disabled.' };
   };
 
   const logout = async () => {
