@@ -7,14 +7,18 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Supabase environment variables are missing');
+  }
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
 
 const ALLOWED_ADMIN_EMAIL = 'YOUR_EMAIL_HERE';
 
@@ -33,14 +37,15 @@ const verifyAdmin = async (req: express.Request, res: express.Response, next: ex
   }
 
   try {
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(token);
 
     if (error || !user || user.email !== ALLOWED_ADMIN_EMAIL) {
       return res.status(404).send('Page Not Found\n\nThe requested page could not be found.');
     }
 
     // Check device fingerprint in admin_devices
-    const { data: device, error: deviceError } = await supabaseAdmin
+    const { data: device, error: deviceError } = await getSupabaseAdmin()
       .from('admin_devices')
       .select('fingerprint')
       .eq('email', user.email)
@@ -88,18 +93,18 @@ app.post('/api/admin/save-restaurant-info', async (req, res) => {
   };
 
   try {
-    const { data: rows } = await supabaseAdmin.from('restaurant_info').select('id').limit(1);
+    const { data: rows } = await getSupabaseAdmin().from('restaurant_info').select('id').limit(1);
     if (rows && rows.length > 0) {
-      await supabaseAdmin.from('restaurant_info').update(restInfo).eq('id', rows[0].id);
+      await getSupabaseAdmin().from('restaurant_info').update(restInfo).eq('id', rows[0].id);
     } else {
-      await supabaseAdmin.from('restaurant_info').insert([restInfo]);
+      await getSupabaseAdmin().from('restaurant_info').insert([restInfo]);
     }
 
-    const { data: chatRows } = await supabaseAdmin.from('chat_settings').select('id').limit(1);
+    const { data: chatRows } = await getSupabaseAdmin().from('chat_settings').select('id').limit(1);
     if (chatRows && chatRows.length > 0) {
-      await supabaseAdmin.from('chat_settings').update(chatInfo).eq('id', chatRows[0].id);
+      await getSupabaseAdmin().from('chat_settings').update(chatInfo).eq('id', chatRows[0].id);
     } else {
-      await supabaseAdmin.from('chat_settings').insert([chatInfo]);
+      await getSupabaseAdmin().from('chat_settings').insert([chatInfo]);
     }
 
     res.json({ success: true });
@@ -119,11 +124,11 @@ app.post('/api/admin/save-about-info', async (req, res) => {
   };
 
   try {
-    const { data: rows } = await supabaseAdmin.from('about_info').select('id').limit(1);
+    const { data: rows } = await getSupabaseAdmin().from('about_info').select('id').limit(1);
     if (rows && rows.length > 0) {
-      await supabaseAdmin.from('about_info').update(aboutInfo).eq('id', rows[0].id);
+      await getSupabaseAdmin().from('about_info').update(aboutInfo).eq('id', rows[0].id);
     } else {
-      await supabaseAdmin.from('about_info').insert([aboutInfo]);
+      await getSupabaseAdmin().from('about_info').insert([aboutInfo]);
     }
     res.json({ success: true });
   } catch (err: any) {
@@ -137,13 +142,13 @@ app.post('/api/admin/save-dishes', async (req, res) => {
   try {
     const ids = dishes.map((d: any) => d.id).filter((id: any) => id > 0);
     if (ids.length > 0) {
-      await supabaseAdmin.from('foods').delete().not('id', 'in', ids);
+      await getSupabaseAdmin().from('foods').delete().not('id', 'in', ids);
     } else {
-      await supabaseAdmin.from('foods').delete().neq('id', 0);
+      await getSupabaseAdmin().from('foods').delete().neq('id', 0);
     }
     
     if (dishes.length > 0) {
-      const { error } = await supabaseAdmin.from('foods').upsert(dishes);
+      const { error } = await getSupabaseAdmin().from('foods').upsert(dishes);
       if (error) return res.status(500).json({ error: error.message });
     }
     res.json({ success: true });
@@ -156,9 +161,9 @@ app.post('/api/admin/save-gallery', async (req, res) => {
   const { gallery } = req.body;
   if (!gallery) return res.status(400).json({ error: 'Missing data' });
   try {
-    await supabaseAdmin.from('gallery').delete().neq('image_url', '');
+    await getSupabaseAdmin().from('gallery').delete().neq('image_url', '');
     if (gallery.length > 0) {
-      const { error } = await supabaseAdmin.from('gallery').insert(gallery);
+      const { error } = await getSupabaseAdmin().from('gallery').insert(gallery);
       if (error) return res.status(500).json({ error: error.message });
     }
     res.json({ success: true });
@@ -171,7 +176,7 @@ app.post('/api/admin/save-categories', async (req, res) => {
   const { categories } = req.body;
   if (!categories) return res.status(400).json({ error: 'Missing data' });
   try {
-    const { error } = await supabaseAdmin.from('categories').upsert(categories, { onConflict: 'id' });
+    const { error } = await getSupabaseAdmin().from('categories').upsert(categories, { onConflict: 'id' });
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
   } catch (err: any) {
