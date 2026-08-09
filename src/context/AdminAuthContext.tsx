@@ -5,19 +5,19 @@ interface AdminAuthContextType {
   isAuthenticated: boolean;
   isAdminMode: boolean;
   userEmail: string | null;
+  isDeviceApproved: boolean | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   setAdminMode: (mode: boolean) => void;
+  checkDevicePreAuth: () => Promise<boolean>;
   loginError: string | null;
   loading: boolean;
 }
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
-const ALLOWED_ADMIN_EMAIL = 'YOUR_EMAIL_HERE';
-
-async function generateDeviceFingerprint(): Promise<string> {
+export async function generateDeviceFingerprint(): Promise<string> {
   const nav = window.navigator;
   const screen = window.screen;
   const str = `${nav.userAgent}-${nav.language}-${screen.colorDepth}-${screen.width}x${screen.height}-${new Date().getTimezoneOffset()}`;
@@ -32,30 +32,34 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdminMode, setAdminMode] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isDeviceApproved, setIsDeviceApproved] = useState<boolean | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const verifyDevice = async (email: string): Promise<boolean> => {
-    if (email !== ALLOWED_ADMIN_EMAIL) return false;
-    const supabase = getSupabaseClient();
-    if (!supabase) return false;
-    
+  const checkDevicePreAuth = async (): Promise<boolean> => {
     try {
       const fingerprint = await generateDeviceFingerprint();
-      const { data, error } = await supabase
-        .from('admin_devices')
-        .select('fingerprint')
-        .eq('email', email)
-        .eq('fingerprint', fingerprint)
-        .eq('is_active', true)
-        .single();
-        
-      if (error || !data) return false;
-      return true;
+      const res = await fetch('/api/admin/check-device', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fingerprint })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setIsDeviceApproved(data.approved);
+        return data.approved === true;
+      }
+      setIsDeviceApproved(false);
+      return false;
     } catch (err) {
       console.error('Device verification failed:', err);
+      setIsDeviceApproved(false);
       return false;
     }
+  };
+
+  const verifyDevice = async (): Promise<boolean> => {
+    return await checkDevicePreAuth();
   };
 
   useEffect(() => {
@@ -65,10 +69,10 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Load active session on mount securely (Supabase handles local persistence automatically)
+    // Load active session on mount securely
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user?.email) {
-        const isDeviceValid = await verifyDevice(session.user.email);
+        const isDeviceValid = await verifyDevice();
         if (isDeviceValid) {
           setIsAuthenticated(true);
           setAdminMode(true);
@@ -86,7 +90,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     // Listen for authentication changes automatically
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user?.email) {
-        const isDeviceValid = await verifyDevice(session.user.email);
+        const isDeviceValid = await verifyDevice();
         if (isDeviceValid) {
           setIsAuthenticated(true);
           setAdminMode(true);
@@ -111,8 +115,10 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setLoginError(null);
-    if (email !== ALLOWED_ADMIN_EMAIL) {
-      return { success: false, error: 'Unauthorized.' };
+    
+    const isDeviceValid = await verifyDevice();
+    if (!isDeviceValid) {
+       return { success: false, error: 'Unauthorized device.' };
     }
 
     const supabase = getSupabaseClient();
@@ -134,12 +140,6 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.session?.user?.email) {
-        const isDeviceValid = await verifyDevice(data.session.user.email);
-        if (!isDeviceValid) {
-          await supabase.auth.signOut();
-          return { success: false, error: 'Unauthorized device.' };
-        }
-
         setIsAuthenticated(true);
         setAdminMode(true);
         setUserEmail(data.user?.email || null);
@@ -179,10 +179,12 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isAdminMode,
         userEmail,
+        isDeviceApproved,
         login,
         signUp,
         logout,
         setAdminMode,
+        checkDevicePreAuth,
         loginError,
         loading,
       }}

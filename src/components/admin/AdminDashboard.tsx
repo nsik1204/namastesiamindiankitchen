@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { adminApiFetch } from "../../services/menuService";
 import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from '../../types';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 
@@ -182,11 +183,53 @@ export default function AdminDashboard({
     handleCancelEditDish();
   };
 
+    const handleToggleDisableDish = async (dish: Dish) => {
+    setIsSaving(true);
+    try {
+      const active = !dish.active;
+      await adminApiFetch('toggle-active', { type: 'dish', id: dish.id, active });
+      const res = { ok: true };
+      if (res.ok) {
+        onUpdateDishes(dishes.map(d => d.id === dish.id ? { ...d, active } : d));
+        showToast(active ? 'Re-enabled' : 'Disabled', 'info');
+      } else {
+        showToast('Failed to toggle active state', 'error');
+      }
+    } catch (err) {
+      showToast('Error', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleToggleDisableCategory = async (cat: Category) => {
+    setIsSaving(true);
+    try {
+      const active = !cat.active;
+      await adminApiFetch('toggle-active', { type: 'category', id: cat.id, slug: cat.slug, active });
+      const res = { ok: true };
+      if (res.ok) {
+        onUpdateCategories(categories.map(c => c.id === cat.id ? { ...c, active } : c));
+        showToast(active ? 'Re-enabled' : 'Disabled', 'info');
+      } else {
+        showToast('Failed to toggle active state', 'error');
+      }
+    } catch (err) {
+      showToast('Error', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDeleteDish = async (id: number, name: string) => {
     if (window.confirm(`WARNING: You are about to PERMANENTLY delete and purge "${name}" from the database.\n\nThis action is completely IRREVERSIBLE and cannot be undone.\n\n-> If you just want to take this item off the public website temporarily, click CANCEL and use "Soft Delete", "Hide", or "Disable" instead.\n\nAre you absolutely sure you want to PERMANENTLY purge this item?`)) {
       setIsSaving(true);
       await new Promise(r => setTimeout(r, 450));
-      onUpdateDishes(dishes.filter(d => d.id !== id));
+      await adminApiFetch('delete', { type: 'dish', id });
+      const res = { ok: true };
+      if (res.ok) {
+        onUpdateDishes(dishes.filter(d => d.id !== id));
+      }
       setIsSaving(false);
       showToast(`Permanently deleted and purged "${name}".`, 'info');
     }
@@ -476,7 +519,7 @@ export default function AdminDashboard({
     showToast(`Added system category tab: "${label}"`);
   };
 
-  const handleDeleteCategory = (id: string, label: string) => {
+  const handleDeleteCategory = async (id: string, label: string) => {
     if (id === 'all') {
       showToast('Standard primary "All" filters category cannot be deleted.', 'error');
       return;
@@ -492,7 +535,11 @@ export default function AdminDashboard({
       return;
     }
 
-    onUpdateCategories(categories.filter(c => c.id !== id));
+    await adminApiFetch('delete', { type: 'category', id });
+      const res = { ok: true };
+      if (res.ok) {
+        onUpdateCategories(categories.filter(c => c.id !== id));
+      }
     showToast(`Permanently deleted and purged category "${label}".`, 'info');
   };
 
@@ -1345,6 +1392,13 @@ export default function AdminDashboard({
                         </button>
                         <button
                           type="button"
+                          onClick={() => handleToggleDisableDish(dish)}
+                          className={`text-[10px] font-bold py-1 px-2.5 rounded-lg transition-colors border ${dish.active ? 'bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-100' : 'bg-green-50 hover:bg-green-100 text-green-700 border-green-100'}`}
+                        >
+                          {dish.active ? 'Disable' : 'Enable'}
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleDeleteDish(dish.id, dish.name)}
                           className="bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-bold py-1 px-2.5 rounded-lg transition-colors border border-red-100"
                         >
@@ -1439,7 +1493,14 @@ export default function AdminDashboard({
                           </div>
 
                           <div className="flex flex-col gap-1 items-end shrink-0">
-                            {cat.id !== 'all' && (
+                            {cat.id !== 'all' && ( <>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleDisableCategory(cat)}
+                                className={`text-[10px] font-bold py-1 px-2.5 rounded-lg transition-colors border ${cat.active ? 'bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200/50' : 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200/50'}`}
+                              >
+                                {cat.active ? 'Disable' : 'Enable'}
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteCategory(cat.id, cat.label)}
@@ -1447,6 +1508,7 @@ export default function AdminDashboard({
                               >
                                 Purge
                               </button>
+                            </>
                             )}
                             {cat.id === 'all' && (
                               <span className="text-[9px] bg-gray-100 text-gray-400 font-mono font-bold px-2 py-1 rounded">Primary</span>

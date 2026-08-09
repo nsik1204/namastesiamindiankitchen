@@ -13,7 +13,7 @@ async function generateDeviceFingerprint(): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-async function adminApiFetch(endpoint: string, body: any): Promise<void> {
+export async function adminApiFetch(endpoint: string, body: any): Promise<void> {
   const supabase = getSupabaseClient();
   if (!supabase) return;
   const { data: { session } } = await supabase.auth.getSession();

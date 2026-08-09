@@ -5,10 +5,12 @@ import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from './types'
 import DishCard from './components/DishCard';
 import { useAdminAuth } from './context/AdminAuthContext';
 import AdminDashboard from './components/admin/AdminDashboard';
+import AdminLoginForm from './components/admin/AdminLoginForm';
 import { getSupabaseClient } from './services/supabaseClient';
 
 export default function App() {
-  const { isAdminMode } = useAdminAuth();
+  const { isAdminMode, isAuthenticated, isDeviceApproved, checkDevicePreAuth } = useAdminAuth();
+  const [isCheckingDevice, setIsCheckingDevice] = useState(false);
   const [currentPath, setCurrentPath] = useState<string>(window.location.pathname);
 
   useEffect(() => {
@@ -59,19 +61,26 @@ export default function App() {
     let active = true;
     async function loadData() {
       try {
-        const [info, about, cats, allDishes, items] = await Promise.all([
+        const fetchPromise = Promise.all([
           MenuService.getRestaurantInfo(),
           MenuService.getAboutInfo(),
           MenuService.getCategories(),
           MenuService.getDishes(),
           MenuService.getGalleryItems()
         ]);
+        const timeoutPromise = new Promise<any[]>((_, reject) =>
+          setTimeout(() => reject(new Error('Supabase fetch timeout')), 8000)
+        );
+        const [info, about, cats, allDishes, items] = await Promise.race([
+          fetchPromise,
+          timeoutPromise
+        ]);
         if (active) {
-          setRestaurantInfo(info);
-          setAboutInfo(about);
-          setCategories(cats);
-          setDishes(allDishes);
-          setGallery(items);
+          setRestaurantInfo(info || RESTAURANT_INFO);
+          setAboutInfo(about || ABOUT_INFO);
+          setCategories(cats && cats.length ? cats : CATEGORIES);
+          setDishes(allDishes && allDishes.length ? allDishes : DISHES);
+          setGallery(items && items.length ? items : GALLERY);
         }
       } catch (err) {
         console.error('Failed to load menu info dynamically:', err);
@@ -342,6 +351,15 @@ export default function App() {
     await MenuService.saveGalleryItems(updated);
   };
 
+  const isAdminPath = currentPath === '/admin' || currentPath === '/admin/';
+
+  useEffect(() => {
+    if (isAdminPath && isDeviceApproved === null && !isCheckingDevice) {
+      setIsCheckingDevice(true);
+      checkDevicePreAuth().finally(() => setIsCheckingDevice(false));
+    }
+  }, [isAdminPath, isDeviceApproved, isCheckingDevice, checkDevicePreAuth]);
+
   // Removed old instant admin mode check. Router-based rendering handles admin area under /admin
 
   // Guard loading state gracefully if critical info has not resolved from services yet
@@ -356,27 +374,40 @@ export default function App() {
     );
   }
 
-  const isAdminPath = currentPath === '/admin' || currentPath === '/admin/';
+
 
   if (isAdminPath) {
-    if (isAdminMode) {
-      return (
-        <AdminDashboard
-          dishes={dishes}
-          categories={categories}
-          restaurantInfo={restaurantInfo}
-          aboutInfo={aboutInfo}
-          gallery={gallery}
-          onUpdateDishes={handleUpdateDishes}
-          onUpdateRestaurantInfo={handleUpdateRestaurantInfo}
-          onUpdateAboutInfo={handleUpdateAboutInfo}
-          onUpdateCategories={handleUpdateCategories}
-          onUpdateGallery={handleUpdateGallery}
-          onClose={() => {
-            window.history.pushState({}, '', '/');
-          }}
-        />
-      );
+    if (isCheckingDevice) {
+      return <div className="min-h-screen bg-[#FFF8F0]" />;
+    }
+    
+    if (isDeviceApproved) {
+      if (isAdminMode && isAuthenticated) {
+        return (
+          <AdminDashboard
+            dishes={dishes}
+            categories={categories}
+            restaurantInfo={restaurantInfo}
+            aboutInfo={aboutInfo}
+            gallery={gallery}
+            onUpdateDishes={handleUpdateDishes}
+            onUpdateRestaurantInfo={handleUpdateRestaurantInfo}
+            onUpdateAboutInfo={handleUpdateAboutInfo}
+            onUpdateCategories={handleUpdateCategories}
+            onUpdateGallery={handleUpdateGallery}
+            onClose={() => {
+              window.history.pushState({}, '', '/');
+            }}
+          />
+        );
+      } else {
+        return (
+          <AdminLoginForm 
+            onSuccess={() => {}} 
+            onCancel={() => window.history.pushState({}, '', '/')} 
+          />
+        );
+      }
     } else {
       return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-white text-gray-800">
