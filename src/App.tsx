@@ -69,7 +69,7 @@ export default function App() {
           MenuService.getGalleryItems()
         ]);
         const timeoutPromise = new Promise<any[]>((_, reject) =>
-          setTimeout(() => reject(new Error('Supabase fetch timeout')), 8000)
+          setTimeout(() => reject(new Error('Supabase fetch timeout')), 20000)
         );
         const [info, about, cats, allDishes, items] = await Promise.race([
           fetchPromise,
