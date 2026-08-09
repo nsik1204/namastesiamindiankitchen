@@ -3,6 +3,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
@@ -13,11 +14,15 @@ app.use(express.json());
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !supabaseServiceKey) {
     throw new Error('Supabase environment variables are missing');
   }
   return createClient(supabaseUrl, supabaseServiceKey);
+}
+
+function getAdminEmail() {
+  return process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || '';
 }
 
 const verifyAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -37,7 +42,8 @@ const verifyAdmin = async (req: express.Request, res: express.Response, next: ex
     const supabaseAdmin = getSupabaseAdmin();
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
-    if (error || !user || user.email !== process.env.ADMIN_EMAIL) {
+    const adminEmail = getAdminEmail();
+    if (error || !user || user.email !== adminEmail) {
       return res.status(404).send('Page Not Found\n\nThe requested page could not be found.');
     }
 
@@ -63,7 +69,7 @@ const verifyAdmin = async (req: express.Request, res: express.Response, next: ex
 app.post('/api/admin/check-device', async (req, res) => {
   const { fingerprint } = req.body;
   if (!fingerprint) return res.status(400).json({ error: 'Fingerprint required' });
-  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminEmail = getAdminEmail();
   if (!adminEmail) return res.status(500).json({ error: 'ADMIN_EMAIL not configured' });
   try {
     const supabaseAdmin = getSupabaseAdmin();
@@ -195,7 +201,8 @@ async function startServer() {
   app.listen(PORT, '0.0.0.0', () => { console.log(`Server running on http://0.0.0.0:${PORT}`); });
 }
 
-if (!process.env.VERCEL) {
+const currentFile = fileURLToPath(import.meta.url);
+if (process.argv[1] === currentFile && !process.env.VERCEL) {
   startServer();
 }
 
