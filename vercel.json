@@ -18,11 +18,11 @@
       "dest": "/api/$1"
     },
     {
-      "src": "/sitemap\.xml",
+      "src": "/sitemap.xml",
       "dest": "/sitemap.xml"
     },
     {
-      "src": "/robots\.txt",
+      "src": "/robots.txt",
       "dest": "/robots.txt"
     },
     {
