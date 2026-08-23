@@ -160,7 +160,9 @@ export default function AdminDashboard({
       showToast(`Dish "${dishForm.name}" updated successfully!`);
       setEditingDish(null);
     } else {
-      const nextId = dishes.length > 0 ? Math.max(...dishes.map(d => d.id)) + 1 : 1;
+      // ✅ FIX: Safely handle both string UUIDs and number IDs
+      const numericIds = dishes.map(d => Number(d.id)).filter(n => !isNaN(n));
+      const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : Date.now();
       const nextOrder = dishes.length > 0 ? Math.max(...dishes.map(d => d.display_order || 0)) + 1 : 1;
       const newDish = {
         ...dishForm,
@@ -215,7 +217,7 @@ export default function AdminDashboard({
     }
   };
 
-  const handleDeleteDish = async (id: number, name: string) => {
+  const handleDeleteDish = async (id: string | number, name: string) => {
     if (window.confirm(`WARNING: You are about to PERMANENTLY delete and purge "${name}" from the database.\n\nThis action is completely IRREVERSIBLE and cannot be undone.\n\n-> If you just want to take this item off the public website temporarily, click CANCEL and use "Soft Delete", "Hide", or "Disable" instead.\n\nAre you absolutely sure you want to PERMANENTLY purge this item?`)) {
       setIsSaving(true);
       try {
