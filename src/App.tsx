@@ -1,1046 +1,1109 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { MenuService } from './services/menuService';
-import { RESTAURANT_INFO, ABOUT_INFO, CATEGORIES, DISHES, GALLERY } from './data';
-import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from './types';
-import DishCard from './components/DishCard';
-import { useAdminAuth } from './context/AdminAuthContext';
-import AdminDashboard from './components/admin/AdminDashboard';
-import AdminLoginForm from './components/admin/AdminLoginForm';
-import { getSupabaseClient } from './services/supabaseClient';
+/**
+ * src/App.tsx — Namaste Siam Indian Kitchen
+ * ---------------------------------------------------------------------------
+ * Single composition root.
+ *
+ *  - Supabase is the ONLY persistent source. No localStorage cache, no static
+ *    seed fallback, no auto-seeding. If a read fails we surface an error state
+ *    instead of silently restoring deleted rows.
+ *  - No admin affordance of any kind is rendered on public pages.
+ *  - The admin surface is reachable only at /unlock-admin?k=<secret>. The key
+ *    is read from import.meta.env.VITE_ADMIN_UNLOCK_KEY (never hardcoded) and
+ *    is ONLY an obscurity gate: it hides the login form from crawlers and
+ *    casual visitors. It is NOT authentication and NOT device binding — the
+ *    real gate is Supabase email+password auth plus an `admin` role checked
+ *    server-side by RLS. A URL key cannot bind access to one device; anyone
+ *    holding the link sees the same login form and still needs credentials.
+ *  - All ordering features (cart, checkout, delivery/pickup, prices-as-buy)
+ *    are removed. The menu is presentational only.
+ *  - Visual language adopted from the supplied workspace UI (warm paper theme:
+ *    ink/amber tokens, Fraunces display, reveal-on-scroll sections).
+ * ---------------------------------------------------------------------------
+ */
 
-export default function App() {
-  const { isAdminMode, isAuthenticated, isDeviceApproved, checkDevicePreAuth } = useAdminAuth();
-  const [isCheckingDevice, setIsCheckingDevice] = useState(false);
-  const [currentPath, setCurrentPath] = useState<string>(window.location.pathname);
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+/* ========================================================================== */
+/* Supabase client (single instance, no fallback data path)                    */
+/* ========================================================================== */
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as
+  | string
+  | undefined;
+
+/** Unlock key comes from env only — never commit a real value. */
+const UNLOCK_KEY = (import.meta.env.VITE_ADMIN_UNLOCK_KEY as string | undefined) ?? "";
+
+let _client: SupabaseClient | null = null;
+function supa(): SupabaseClient {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error(
+      "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+    );
+  }
+  if (!_client) {
+    _client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+        storageKey: "nsik-auth",
+      },
+    });
+  }
+  return _client;
+}
+
+/* ========================================================================== */
+/* Types                                                                       */
+/* ========================================================================== */
+
+export interface Dish {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  priceTHB: number;
+  category: string;
+  veg: boolean;
+  spiceLevel: string;
+  ingredients: string[];
+  chefSpecial: boolean;
+  bestseller: boolean;
+  customerFavorite: boolean;
+  todaySpecial: boolean;
+  image: string;
+  active: boolean;
+  displayOrder: number;
+}
+
+export interface Category {
+  id: string;
+  slug: string;
+  name: string;
+  displayOrder: number;
+  active: boolean;
+}
+
+export interface RestaurantInfo {
+  name: string;
+  address: string;
+  phone: string;
+  openingHours: string;
+  instagram: string;
+  website: string;
+  diningStyle: string;
+}
+
+export interface AboutInfo {
+  story: string[];
+  highlights: string[];
+}
+
+export interface GalleryItem {
+  id: number;
+  image: string;
+  alt: string;
+  tall: boolean;
+  displayOrder: number;
+  active: boolean;
+}
+
+type LoadState = "loading" | "ready" | "error";
+
+/* ========================================================================== */
+/* Row mappers — pure, no defaults invented from local seed data               */
+/* ========================================================================== */
+
+const mapDish = (r: any): Dish => ({
+  id: Number(r.id),
+  slug: r.slug ?? "",
+  name: r.name ?? "",
+  description: r.description ?? "",
+  priceTHB: Number(r.price_thb ?? 0),
+  category: r.category_id ?? "",
+  veg: r.veg !== false && r.food_type !== "nonveg",
+  spiceLevel: r.spice_level ?? "",
+  ingredients: Array.isArray(r.ingredients) ? r.ingredients : [],
+  chefSpecial: !!r.chef_special,
+  bestseller: !!(r.bestseller ?? r.popular),
+  customerFavorite: !!r.customer_favorite,
+  todaySpecial: !!r.today_special,
+  image: r.image_url ?? "",
+  active: r.active !== false,
+  displayOrder: Number(r.display_order ?? 0),
+});
+
+const mapCategory = (r: any): Category => ({
+  id: String(r.id),
+  slug: r.slug ?? String(r.id),
+  name: r.name ?? r.label ?? String(r.id),
+  displayOrder: Number(r.display_order ?? r.sort_order ?? 0),
+  active: r.active !== false,
+});
+
+const mapGallery = (r: any): GalleryItem => ({
+  id: Number(r.id),
+  image: r.image_url ?? "",
+  alt: r.alt_text ?? r.title ?? "",
+  tall: !!r.is_tall,
+  displayOrder: Number(r.display_order ?? r.sort_order ?? 0),
+  active: r.active !== false,
+});
+
+/* ========================================================================== */
+/* Data layer — reads Supabase and nothing else                                */
+/* ========================================================================== */
+
+async function loadSiteData() {
+  const db = supa();
+
+  const [dishesRes, catsRes, infoRes, aboutRes, galleryRes] = await Promise.all([
+    db.from("foods").select("*").eq("active", true).order("display_order", { ascending: true }),
+    db.from("categories").select("*").eq("active", true).order("display_order", { ascending: true }),
+    db.from("restaurant_info").select("*").limit(1).maybeSingle(),
+    db.from("about_info").select("*").limit(1).maybeSingle(),
+    db.from("gallery").select("*").eq("active", true).order("display_order", { ascending: true }),
+  ]);
+
+  const firstError =
+    dishesRes.error || catsRes.error || infoRes.error || aboutRes.error || galleryRes.error;
+  if (firstError) throw firstError;
+
+  const info = infoRes.data;
+  const about = aboutRes.data;
+
+  return {
+    dishes: (dishesRes.data ?? []).map(mapDish),
+    categories: (catsRes.data ?? []).map(mapCategory),
+    restaurantInfo: info
+      ? ({
+          name: info.name ?? "",
+          address: info.address ?? "",
+          phone: info.phone ?? "",
+          openingHours: info.opening_hours ?? "",
+          instagram: info.instagram ?? "",
+          website: info.website ?? "",
+          diningStyle: info.dining_style ?? "",
+        } as RestaurantInfo)
+      : null,
+    aboutInfo: about
+      ? ({
+          story: about.story_paragraphs ?? [],
+          highlights: about.highlights ?? [],
+        } as AboutInfo)
+      : null,
+    gallery: (galleryRes.data ?? []).map(mapGallery),
+  };
+}
+
+/** Admin write helpers. Authorisation is enforced by RLS, not by this code. */
+const AdminData = {
+  async listAllDishes(): Promise<Dish[]> {
+    const { data, error } = await supa()
+      .from("foods")
+      .select("*")
+      .order("display_order", { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(mapDish);
+  },
+
+  /** Hard delete — the row is gone from the single source of truth. */
+  async deleteDish(id: number): Promise<void> {
+    const { error } = await supa().from("foods").delete().eq("id", id);
+    if (error) throw error;
+  },
+
+  async setDishActive(id: number, active: boolean): Promise<void> {
+    const { error } = await supa()
+      .from("foods")
+      .update({ active, is_available: active, updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw error;
+  },
+
+  async upsertDish(d: Partial<Dish> & { name: string; category: string }): Promise<void> {
+    const row: Record<string, unknown> = {
+      slug: d.slug || slugify(d.name),
+      name: d.name,
+      description: d.description ?? "",
+      price_thb: d.priceTHB ?? 0,
+      category_id: d.category,
+      veg: d.veg !== false,
+      food_type: d.veg === false ? "nonveg" : "veg",
+      spice_level: d.spiceLevel ?? "",
+      ingredients: d.ingredients ?? [],
+      chef_special: !!d.chefSpecial,
+      bestseller: !!d.bestseller,
+      popular: !!d.bestseller,
+      customer_favorite: !!d.customerFavorite,
+      today_special: !!d.todaySpecial,
+      image_url: d.image ?? "",
+      active: d.active !== false,
+      is_available: d.active !== false,
+      display_order: d.displayOrder ?? 0,
+      updated_at: new Date().toISOString(),
+    };
+    if (d.id && d.id > 0) row.id = d.id;
+    const { error } = await supa().from("foods").upsert(row, { onConflict: "id" });
+    if (error) throw error;
+  },
+};
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_]+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+const thb = (n: number) => `฿${n.toLocaleString("en-US")}`;
+
+/* ========================================================================== */
+/* Routing — minimal, hash-free, reactive to history API                       */
+/* ========================================================================== */
+
+function useLocation() {
+  const [loc, setLoc] = useState(() => ({
+    path: window.location.pathname,
+    search: window.location.search,
+  }));
 
   useEffect(() => {
-    const handleLocationChange = () => {
-      setCurrentPath(window.location.pathname);
+    const sync = () =>
+      setLoc({ path: window.location.pathname, search: window.location.search });
+    const push = window.history.pushState;
+    const replace = window.history.replaceState;
+    window.history.pushState = function (...a: any) {
+      push.apply(this, a as any);
+      sync();
     };
-    // Intercept pushState/replaceState so routing is reactive even within SPA
-    const originalPushState = window.history.pushState;
-    const originalReplaceState = window.history.replaceState;
-    
-    window.history.pushState = function(...args) {
-      originalPushState.apply(this, args);
-      handleLocationChange();
+    window.history.replaceState = function (...a: any) {
+      replace.apply(this, a as any);
+      sync();
     };
-    
-    window.history.replaceState = function(...args) {
-      originalReplaceState.apply(this, args);
-      handleLocationChange();
-    };
-
-    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener("popstate", sync);
     return () => {
-      window.history.pushState = originalPushState;
-      window.history.replaceState = originalReplaceState;
-      window.removeEventListener('popstate', handleLocationChange);
+      window.history.pushState = push;
+      window.history.replaceState = replace;
+      window.removeEventListener("popstate", sync);
     };
   }, []);
 
-  // Centralized data states
+  return loc;
+}
+
+/** Constant-time-ish comparison so the key isn't trivially timing-probed. */
+function keyMatches(provided: string): boolean {
+  if (!UNLOCK_KEY || !provided) return false;
+  if (provided.length !== UNLOCK_KEY.length) return false;
+  let diff = 0;
+  for (let i = 0; i < UNLOCK_KEY.length; i++) {
+    diff |= UNLOCK_KEY.charCodeAt(i) ^ provided.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+/* ========================================================================== */
+/* Auth — Supabase session + server-verified admin role                        */
+/* ========================================================================== */
+
+interface AdminSession {
+  status: "checking" | "anon" | "admin" | "denied";
+  email: string | null;
+}
+
+function useAdminSession(enabled: boolean) {
+  const [session, setSession] = useState<AdminSession>({
+    status: enabled ? "checking" : "anon",
+    email: null,
+  });
+
+  const evaluate = useCallback(async () => {
+    if (!enabled) return;
+    try {
+      const db = supa();
+      const {
+        data: { session: s },
+      } = await db.auth.getSession();
+      if (!s?.user) {
+        setSession({ status: "anon", email: null });
+        return;
+      }
+      // Role lives in a dedicated table and is verified through a
+      // SECURITY DEFINER function — never in localStorage or the JWT payload.
+      const { data, error } = await db.rpc("is_admin");
+      if (error || data !== true) {
+        setSession({ status: "denied", email: s.user.email ?? null });
+        return;
+      }
+      setSession({ status: "admin", email: s.user.email ?? null });
+    } catch {
+      setSession({ status: "denied", email: null });
+    }
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    void evaluate();
+    const {
+      data: { subscription },
+    } = supa().auth.onAuthStateChange(() => void evaluate());
+    return () => subscription.unsubscribe();
+  }, [enabled, evaluate]);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    const { error } = await supa().auth.signInWithPassword({ email, password });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true as const };
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await supa().auth.signOut();
+    setSession({ status: "anon", email: null });
+  }, []);
+
+  return { session, signIn, signOut, refresh: evaluate };
+}
+
+/* ========================================================================== */
+/* Presentational primitives (workspace UI language)                           */
+/* ========================================================================== */
+
+function Reveal({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => e.isIntersecting && (setShown(true), io.disconnect()),
+      { threshold: 0.12 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div
+      ref={ref}
+      style={{ transitionDelay: `${delay}ms` }}
+      className={`transition-all duration-700 ease-out ${
+        shown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Chip({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-line bg-ink2 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-sand">
+      {children}
+    </span>
+  );
+}
+
+/* ========================================================================== */
+/* Public site                                                                 */
+/* ========================================================================== */
+
+function PublicSite() {
+  const [state, setState] = useState<LoadState>("loading");
+  const [errorMsg, setErrorMsg] = useState<string>("");
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [restaurantInfo, setRestaurantInfo] = useState<RestaurantInfo | null>(null);
-  const [aboutInfo, setAboutInfo] = useState<AboutInfo | null>(null);
+  const [info, setInfo] = useState<RestaurantInfo | null>(null);
+  const [about, setAbout] = useState<AboutInfo | null>(null);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [activeCat, setActiveCat] = useState<string>("all");
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<Dish | null>(null);
 
-  // Navigation & filter states
-  const [activeCategory, setActiveCategory] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  
-  // Modal states
-  const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
-  const [selectedInfoType, setSelectedInfoType] = useState<'about' | 'contact' | 'privacy' | 'terms' | null>(null);
-
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  // Dynamic async initialization to mirror production backend architecture (Supabase design pattern)
-  useEffect(() => {
-    let active = true;
-    async function loadData() {
-      try {
-        const fetchPromise = Promise.all([
-          MenuService.getRestaurantInfo(),
-          MenuService.getAboutInfo(),
-          MenuService.getCategories(),
-          MenuService.getDishes(),
-          MenuService.getGalleryItems()
-        ]);
-        const timeoutPromise = new Promise<any[]>((_, reject) =>
-          setTimeout(() => reject(new Error('Supabase fetch timeout')), 20000)
-        );
-        const [info, about, cats, allDishes, items] = await Promise.race([
-          fetchPromise,
-          timeoutPromise
-        ]);
-        if (active) {
-          setRestaurantInfo(info || RESTAURANT_INFO);
-          setAboutInfo(about || ABOUT_INFO);
-          setCategories(cats && cats.length ? cats : CATEGORIES);
-          setDishes(allDishes && allDishes.length ? allDishes : DISHES);
-          setGallery(items && items.length ? items : GALLERY);
-        }
-      } catch (err) {
-        console.error('Failed to load menu info dynamically:', err);
-        if (active) {
-          setRestaurantInfo(RESTAURANT_INFO);
-          setAboutInfo(ABOUT_INFO);
-          setCategories(CATEGORIES);
-          setDishes(DISHES);
-          setGallery(GALLERY);
-        }
-      }
+  const load = useCallback(async () => {
+    setState("loading");
+    try {
+      const data = await loadSiteData();
+      setDishes(data.dishes);
+      setCategories(data.categories);
+      setInfo(data.restaurantInfo);
+      setAbout(data.aboutInfo);
+      setGallery(data.gallery);
+      setState("ready");
+    } catch (e: any) {
+      setErrorMsg(e?.message ?? "Unable to reach the kitchen database.");
+      setState("error");
     }
-    loadData();
-    return () => {
-      active = false;
-    };
   }, []);
 
-  // Setup Supabase Realtime subscriptions to listen to updates made on other/connected devices
   useEffect(() => {
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
+    void load();
+  }, [load]);
 
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'foods' },
-        async (payload) => {
-          console.log('Realtime update: foods table changed', payload);
-          try {
-            const allDishes = await MenuService.getDishes();
-            setDishes(allDishes);
-          } catch (err) {
-            console.error('Failed to reload dishes on realtime event:', err);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'categories' },
-        async (payload) => {
-          console.log('Realtime update: categories table changed', payload);
-          try {
-            const cats = await MenuService.getCategories();
-            setCategories(cats);
-          } catch (err) {
-            console.error('Failed to reload categories on realtime event:', err);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'gallery' },
-        async (payload) => {
-          console.log('Realtime update: gallery table changed', payload);
-          try {
-            const items = await MenuService.getGalleryItems();
-            setGallery(items);
-          } catch (err) {
-            console.error('Failed to reload gallery on realtime event:', err);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'restaurant_info' },
-        async (payload) => {
-          console.log('Realtime update: restaurant_info table changed', payload);
-          try {
-            const info = await MenuService.getRestaurantInfo();
-            setRestaurantInfo(info);
-          } catch (err) {
-            console.error('Failed to reload restaurant info on realtime event:', err);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'chat_settings' },
-        async (payload) => {
-          console.log('Realtime update: chat_settings table changed', payload);
-          try {
-            const info = await MenuService.getRestaurantInfo();
-            setRestaurantInfo(info);
-          } catch (err) {
-            console.error('Failed to reload chat settings on realtime event:', err);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'about_info' },
-        async (payload) => {
-          console.log('Realtime update: about_info table changed', payload);
-          try {
-            const about = await MenuService.getAboutInfo();
-            setAboutInfo(about);
-          } catch (err) {
-            console.error('Failed to reload about info on realtime event:', err);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  // Keyboard shortcut listener to close any active modal with 'Escape'
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setSelectedDish(null);
-        setSelectedInfoType(null);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Filter food list based on category and search query
-  const filteredDishes = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    const list = dishes
-      .filter(f => f.active !== false)
-      .filter(f => {
-        const matchCategory = activeCategory === 'all' || f.category === activeCategory;
-        if (!q) return matchCategory;
-        const searchable = `${f.name} ${f.description} ${f.category} ${f.ingredients.join(' ')}`.toLowerCase();
-        return matchCategory && searchable.includes(q);
-      });
-    return [...list].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-  }, [dishes, activeCategory, searchQuery]);
-
-  // Centralized computed sections extracted as derived state architectures
-  const todaysSpecial = useMemo(() => {
-    const specials = dishes.filter(d => d.todaySpecial && d.active !== false);
-    if (specials.length === 0) return null;
-    return [...specials].sort((a, b) => (a.display_order_today || 0) - (b.display_order_today || 0))[0];
-  }, [dishes]);
-
-  const chefRecommendations = useMemo(() => {
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
     return dishes
-      .filter(d => d.chefSpecial && d.active !== false)
-      .sort((a, b) => (a.display_order_chef || 0) - (b.display_order_chef || 0));
-  }, [dishes]);
+      .filter((d) => (activeCat === "all" ? true : d.category === activeCat))
+      .filter(
+        (d) =>
+          !q ||
+          d.name.toLowerCase().includes(q) ||
+          d.description.toLowerCase().includes(q) ||
+          d.ingredients.some((i) => i.toLowerCase().includes(q))
+      )
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+  }, [dishes, activeCat, query]);
 
-  const customerFavorites = useMemo(() => {
-    return dishes
-      .filter(d => d.customerFavorite && d.active !== false)
-      .sort((a, b) => (a.display_order_favorite || 0) - (b.display_order_favorite || 0));
-  }, [dishes]);
+  const todaySpecial = useMemo(
+    () => visible.find((d) => d.todaySpecial) ?? null,
+    [visible]
+  );
 
-  const popularDishes = useMemo(() => {
-    return dishes
-      .filter(d => d.bestseller && d.active !== false)
-      .sort((a, b) => (a.display_order_popular || 0) - (b.display_order_popular || 0));
-  }, [dishes]);
-
-  const sortedCategories = useMemo(() => {
-    return [...categories]
-      .filter(c => c.active !== false)
-      .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-  }, [categories]);
-
-  const sortedGallery = useMemo(() => {
-    return [...gallery]
-      .filter(g => g.active !== false)
-      .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-  }, [gallery]);
-
-  // Filtered popular and favorites for nested sections with dedicated display orders
-  const popularFiltered = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return dishes
-      .filter(d => d.bestseller && d.active !== false && (activeCategory === 'all' || d.category === activeCategory))
-      .filter(d => {
-        if (!q) return true;
-        const searchable = `${d.name} ${d.description} ${d.category} ${d.ingredients.join(' ')}`.toLowerCase();
-        return searchable.includes(q);
-      })
-      .sort((a, b) => (a.display_order_popular || 0) - (b.display_order_popular || 0));
-  }, [dishes, activeCategory, searchQuery]);
-
-  const favoritesFiltered = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return dishes
-      .filter(d => d.customerFavorite && d.active !== false && (activeCategory === 'all' || d.category === activeCategory))
-      .filter(d => {
-        if (!q) return true;
-        const searchable = `${d.name} ${d.description} ${d.category} ${d.ingredients.join(' ')}`.toLowerCase();
-        return searchable.includes(q);
-      })
-      .sort((a, b) => (a.display_order_favorite || 0) - (b.display_order_favorite || 0));
-  }, [dishes, activeCategory, searchQuery]);
-
-  // Remove fallback that silently changes ordering
-  const popularDishesToRender = popularFiltered;
-
-  // Handler for custom search click button
-  const handleLiveSearchClick = () => {
-    if (searchInputRef.current) {
-      setSearchQuery(searchInputRef.current.value);
-      searchInputRef.current.focus();
-      const menuSection = document.getElementById('menu');
-      if (menuSection) {
-        menuSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
-  };
-
-  // Precompiled modal content helpers for info links
-  const getInfoModalContent = () => {
-    if (!selectedInfoType || !restaurantInfo) return null;
-    switch (selectedInfoType) {
-      case 'about':
-        return {
-          title: `About ${restaurantInfo.name}`,
-          body: 'A premium culinary destination celebrating authentic flavours, fresh ingredients, and chef-crafted experiences.'
-        };
-      case 'contact':
-        return {
-          title: 'Contact Information',
-          body: `📍 ${restaurantInfo.address}\n\n📞 ${restaurantInfo.phone}\n\n🕒 ${restaurantInfo.openingHours}`
-        };
-      case 'privacy':
-        return {
-          title: 'Privacy Policy',
-          body: 'We value your privacy and use information only to improve your browsing experience.'
-        };
-      case 'terms':
-        return {
-          title: 'Terms of Service',
-          body: 'All menu items and prices are subject to availability and seasonal updates.'
-        };
-      default:
-        return { title: 'Information', body: '' };
-    }
-  };
-
-  const infoModalData = getInfoModalContent();
-
-  // Dynamic persistence wrappers mapping changes back to the Supabase Cloud DB tables
-  const handleUpdateDishes = async (updated: Dish[]) => {
-    setDishes(updated);
-    await MenuService.saveDishes(updated);
-  };
-
-  const handleUpdateRestaurantInfo = async (updated: RestaurantInfo) => {
-    setRestaurantInfo(updated);
-    await MenuService.saveRestaurantInfo(updated);
-  };
-
-  const handleUpdateAboutInfo = async (updated: AboutInfo) => {
-    setAboutInfo(updated);
-    await MenuService.saveAboutInfo(updated);
-  };
-
-  const handleUpdateCategories = async (updated: Category[]) => {
-    setCategories(updated);
-    await MenuService.saveCategories(updated);
-  };
-
-  const handleUpdateGallery = async (updated: GalleryItem[]) => {
-    setGallery(updated);
-    await MenuService.saveGalleryItems(updated);
-  };
-
-  const isAdminPath = currentPath === '/admin' || currentPath === '/admin/';
-
-  useEffect(() => {
-    if (isAdminPath && isDeviceApproved === null && !isCheckingDevice) {
-      setIsCheckingDevice(true);
-      checkDevicePreAuth().finally(() => setIsCheckingDevice(false));
-    }
-  }, [isAdminPath, isDeviceApproved, isCheckingDevice, checkDevicePreAuth]);
-
-  // Removed old instant admin mode check. Router-based rendering handles admin area under /admin
-
-  // Guard loading state gracefully if critical info has not resolved from services yet
-  if (!restaurantInfo || !aboutInfo) {
+  if (state === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FFF8F0]" style={{ color: 'var(--orange)' }}>
-        <div className="text-center font-sans">
-          <p className="text-xl font-bold tracking-tight mb-2">Namaste Siam Indian Kitchen</p>
-          <p className="text-sm opacity-80 animate-pulse">Loading menu experience...</p>
+      <div className="min-h-screen grid place-items-center bg-ink text-sand">
+        <div className="flex flex-col items-center gap-3">
+          <span className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-amber" />
+          <p className="text-sm">Warming the tandoor…</p>
         </div>
       </div>
     );
   }
 
-
-
-  if (isAdminPath) {
-    if (isCheckingDevice) {
-      return <div className="min-h-screen bg-[#FFF8F0]" />;
-    }
-    
-    if (isDeviceApproved) {
-      if (isAdminMode && isAuthenticated) {
-        return (
-          <AdminDashboard
-            dishes={dishes}
-            categories={categories}
-            restaurantInfo={restaurantInfo}
-            aboutInfo={aboutInfo}
-            gallery={gallery}
-            onUpdateDishes={handleUpdateDishes}
-            onUpdateRestaurantInfo={handleUpdateRestaurantInfo}
-            onUpdateAboutInfo={handleUpdateAboutInfo}
-            onUpdateCategories={handleUpdateCategories}
-            onUpdateGallery={handleUpdateGallery}
-            onClose={() => {
-              window.history.pushState({}, '', '/');
-            }}
-          />
-        );
-      } else {
-        return (
-          <AdminLoginForm 
-            onSuccess={() => {}} 
-            onCancel={() => window.history.pushState({}, '', '/')} 
-          />
-        );
-      }
-    } else {
-      return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-white text-gray-800">
-          <h1 className="text-4xl font-bold mb-4">Page Not Found</h1>
-          <p className="text-lg">The requested page could not be found.</p>
+  if (state === "error") {
+    return (
+      <div className="min-h-screen grid place-items-center bg-ink px-6 text-center">
+        <div className="max-w-md">
+          <h1 className="font-display text-3xl text-cream">Menu unavailable</h1>
+          <p className="mt-3 text-sm text-sand">
+            We could not load the live menu. Nothing is served from a local copy,
+            so what you see is always what the kitchen published.
+          </p>
+          <p className="mt-2 text-xs text-husk">{errorMsg}</p>
+          <button
+            onClick={() => void load()}
+            className="mt-6 rounded-full bg-amber px-6 h-11 text-sm font-semibold text-ink hover:bg-amberhi transition-colors"
+          >
+            Try again
+          </button>
         </div>
-      );
-    }
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen">
-      {/* HEADER NAVIGATION */}
-      <nav id="navbar">
-        <div className="logo" id="logo-branding">
-          Namaste Siam <span id="logo-accent">Indian Kitchen</span>
+    <div className="min-h-screen bg-ink text-cream">
+      {/* NOTE: no admin button, no admin link, no lock icon anywhere here. */}
+      <header className="sticky top-0 z-40 border-b border-line/70 bg-ink/90 backdrop-blur-md">
+        <div className="mx-auto flex h-[68px] max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+          <a href="#top" className="leading-none">
+            <span className="block font-display text-xl tracking-tight text-cream">
+              Namaste <span className="italic text-amber">Siam</span>
+            </span>
+            <span className="mt-1 hidden text-[11px] uppercase tracking-widest text-husk sm:block">
+              Indian Kitchen · Bangkok
+            </span>
+          </a>
+          <nav className="hidden items-center gap-7 text-sm text-sand md:flex">
+            <a href="#menu" className="transition-colors hover:text-amber">Menu</a>
+            <a href="#about" className="transition-colors hover:text-amber">About</a>
+            <a href="#gallery" className="transition-colors hover:text-amber">Gallery</a>
+            <a href="#contact" className="transition-colors hover:text-amber">Contact</a>
+          </nav>
+          {info?.phone && (
+            <a
+              href={`tel:${info.phone.replace(/\s/g, "")}`}
+              className="rounded-full bg-amber px-5 h-10 text-sm font-semibold text-ink leading-10 transition-colors hover:bg-amberhi"
+            >
+              Reserve a table
+            </a>
+          )}
         </div>
-        <ul className="nav-links" id="menu-links">
-          <li><a href="#menu" id="link-menu">Menu</a></li>
-          <li><a href="#special" id="link-specials">Specials</a></li>
-          <li><a href="#about" id="link-about">About</a></li>
-          <li><a href="#info" id="link-info">Info</a></li>
-        </ul>
-        <div className="nav-welcome" id="nav-welcome-message">
-          Welcome to <span className="brand">{restaurantInfo.name}</span>
-          <span className="line2">- Crafted Fresh. Served With Passion.</span>
-        </div>
-      </nav>
+      </header>
 
-      {/* HERO SECTION */}
-      <section className="hero" id="top">
-        <div className="hero-content" id="hero-heading-block">
-          <div className="hero-badge" id="premium-badge">
-            <span className="dot" id="dot-indicator"></span> Premium Dining Experience
+      {/* Hero */}
+      <section id="top" className="border-b border-line/60">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 pb-12 pt-14 sm:px-6 lg:grid-cols-12 lg:gap-8">
+          <div className="lg:col-span-7">
+            <Reveal>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber">
+                Authentic · wood-fired · {info?.diningStyle || "premium casual dining"}
+              </p>
+            </Reveal>
+            <Reveal delay={90}>
+              <h1 className="mt-5 font-display text-[2.7rem] leading-[1.02] tracking-[-0.02em] text-cream sm:text-6xl lg:text-[4.4rem]">
+                Experience
+                <br />
+                <em className="font-light italic text-amber">authentic</em> flavours.
+              </h1>
+            </Reveal>
+            <Reveal delay={170}>
+              <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-sand sm:text-base">
+                {about?.story?.[0] ??
+                  "Indian and Thai cooking from one kitchen in the heart of Bangkok — every curry slow-simmered, every naan pulled fresh from the tandoor."}
+              </p>
+            </Reveal>
+            <Reveal delay={250}>
+              <div className="mt-8 flex flex-wrap items-center gap-3.5">
+                <a
+                  href="#menu"
+                  className="inline-flex h-12 items-center rounded-full bg-amber px-6 text-sm font-semibold text-ink transition-all hover:bg-amberhi active:scale-95"
+                >
+                  Browse the menu
+                </a>
+                {info?.phone && (
+                  <a
+                    href={`tel:${info.phone.replace(/\s/g, "")}`}
+                    className="inline-flex h-12 items-center rounded-full border border-line px-6 text-sm text-sand transition-colors hover:border-amber/50 hover:text-amber"
+                  >
+                    Call {info.phone}
+                  </a>
+                )}
+              </div>
+            </Reveal>
           </div>
-          <h1 id="hero-title">Experience <em>Authentic Flavours</em></h1>
-          <p id="hero-description">
-            Crafted Fresh. Served With Passion. Explore our signature menu curated by our chefs for a refined dining experience.
-          </p>
-          
-          <div className="search-bar" id="search-bar-element">
+
+          {todaySpecial && (
+            <Reveal delay={200}>
+              <aside className="lg:col-span-5">
+                <div className="overflow-hidden rounded-3xl border border-line bg-coal shadow-sm">
+                  {todaySpecial.image && (
+                    <img
+                      src={todaySpecial.image}
+                      alt={todaySpecial.name}
+                      loading="lazy"
+                      className="h-56 w-full object-cover"
+                    />
+                  )}
+                  <div className="p-6">
+                    <Chip>Today&apos;s special</Chip>
+                    <h2 className="mt-3 font-display text-2xl text-cream">
+                      {todaySpecial.name}
+                    </h2>
+                    <p className="mt-2 line-clamp-3 text-sm text-sand">
+                      {todaySpecial.description}
+                    </p>
+                    <p className="mt-4 text-sm font-semibold text-amber">
+                      {thb(todaySpecial.priceTHB)}
+                    </p>
+                  </div>
+                </div>
+              </aside>
+            </Reveal>
+          )}
+        </div>
+      </section>
+
+      {/* Menu */}
+      <section id="menu" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <Reveal>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber">
+                The menu
+              </p>
+              <h2 className="mt-2 font-display text-3xl text-cream sm:text-4xl">
+                Dishes from the fire
+              </h2>
+            </div>
             <input
-              type="text"
-              placeholder="Search dishes, ingredients, category..."
-              ref={searchInputRef}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              id="searchInput"
-              aria-label="Search menu items"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search dishes or ingredients…"
+              aria-label="Search the menu"
+              className="h-11 w-full max-w-xs rounded-full border border-line bg-coal px-5 text-sm text-cream outline-none placeholder:text-husk focus:border-amber/60"
             />
-            <button 
-              type="button" 
-              onClick={handleLiveSearchClick} 
-              id="searchBtn"
-            >
-              Live Menu Search
-            </button>
           </div>
+        </Reveal>
 
-          <div className="hero-stats" id="hero-counters">
-            <span className="hero-stat" id="stat-rating">⭐ 4.8 Customer Rating</span>
-            <span className="hero-stat" id="stat-dishes">🍽️ 100+ Signature Dishes</span>
-            <span className="hero-stat" id="stat-ingredients">👨‍🍳 Fresh Ingredients</span>
-            <span className="hero-stat" id="stat-quality">🌿 Premium Quality</span>
-            <span className="hero-stat" id="stat-chef">🏆 Chef Recommended</span>
-          </div>
-        </div>
-
-        {/* HERO VISUAL (TODAY'S SPECIAL CARD) */}
-        <div className="hero-visual" id="todaySpecialContainer">
-          {todaysSpecial && (
-            <div 
-              className="feature-card" 
-              id={`todays-special-${todaysSpecial.id}`}
-              onClick={() => setSelectedDish(todaysSpecial)}
-              style={{ cursor: 'pointer' }}
-              tabIndex={0}
-              role="button"
-              aria-label={`Today's Special: ${todaysSpecial.name}`}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  setSelectedDish(todaysSpecial);
-                }
-              }}
-            >
-              <img src={todaysSpecial.image} alt={todaysSpecial.name} />
-              <div className="feature-card-body" id="special-card-body">
-                <div className="feature-kicker" id="badge-kicker">Today's Special</div>
-                <div className="feature-title" id="special-title">{todaysSpecial.name}</div>
-                <div className="feature-sub" id="special-description">{todaysSpecial.description}</div>
-                <div className="feature-price" id="special-price-tag">฿{todaysSpecial.priceTHB}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* CHEF RECOMMENDATIONS SECTION */}
-      <section className="section" id="special">
-        <div className="section-header" id="recs-header">
-          <div className="section-title" id="recs-title">
-            Chef <span>Recommendations</span>
-          </div>
-        </div>
-        <div className="cards-3" id="chefRecs">
-          {chefRecommendations.slice(0, 3).map((d) => (
-            <div
-              key={`recs-${d.id}`}
-              className="info-card"
-              id={`rec-item-${d.id}`}
-              onClick={() => setSelectedDish(d)}
-              style={{ cursor: 'pointer' }}
-              tabIndex={0}
-              role="button"
-              aria-label={`Chef Recommendation: ${d.name}`}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  setSelectedDish(d);
-                }
-              }}
-            >
-              <img
-                src={d.image}
-                alt={d.name}
-                loading="lazy"
-                style={{
-                  width: '100%',
-                  height: '170px',
-                  objectFit: 'cover',
-                  borderRadius: '12px',
-                  marginBottom: '12px',
-                }}
-              />
-              <h3 id={`rec-title-${d.id}`}>{d.name}</h3>
-              <p id={`rec-desc-${d.id}`}>{d.description}</p>
-              <p
-                id={`rec-price-${d.id}`}
-                style={{
-                  marginTop: '8px',
-                  color: 'var(--orange)',
-                  fontFamily: "'Syne', sans-serif",
-                  fontWeight: 800,
-                }}
-              >
-                ฿{d.priceTHB}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* CATEGORY SELECTOR */}
-      <section className="section" style={{ paddingTop: '20px' }} id="menu">
-        <div className="section-header" id="categories-header">
-          <div className="section-title" id="categories-title">
-            Browse <span>Menu Categories</span>
-          </div>
-        </div>
-        <div className="categories" id="categories-tabs" role="tablist" aria-label="Menu categories">
-          {sortedCategories.map((c) => (
+        <div className="mt-7 flex flex-wrap gap-2">
+          {[{ id: "all", name: "All" }, ...categories].map((c) => (
             <button
-              key={`cat-${c.id}`}
-              id={`cat-btn-${c.id}`}
-              className={`cat-pill ${c.id === activeCategory ? 'active' : ''}`}
-              onClick={() => setActiveCategory(c.id)}
-              role="tab"
-              aria-selected={c.id === activeCategory}
-              aria-controls="menu-grids"
+              key={c.id}
+              onClick={() => setActiveCat(c.id)}
+              className={`h-9 rounded-full border px-4 text-sm transition-colors ${
+                activeCat === c.id
+                  ? "border-amber bg-amber text-ink font-semibold"
+                  : "border-line text-sand hover:border-amber/50 hover:text-amber"
+              }`}
             >
-              {c.label}
+              {c.name}
             </button>
           ))}
         </div>
-      </section>
 
-      {/* POPULAR DISHES GRID */}
-      <section className="section" style={{ paddingTop: '0' }} id="popular-section">
-        <div className="section-header" id="popular-header">
-          <div className="section-title" id="popular-title">
-            Popular <span>Dishes</span>
-          </div>
-        </div>
-        <div className="menu-grid" id="menuGrid">
-          {popularDishesToRender.length > 0 ? (
-            popularDishesToRender.map((d) => (
-              <DishCard
-                key={`popular-dish-${d.id}`}
-                dish={d}
-                idPrefix="dish"
-                onClick={() => setSelectedDish(d)}
-              />
-            ))
-          ) : (
-            <p className="col-span-full py-8 text-center" style={{ color: 'var(--text-muted)' }} id="no-popular-found">
-              No popular dishes found matching your search.
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* CUSTOMER FAVORITES GRID */}
-      <section className="section" style={{ paddingTop: '0' }} id="favorites-section">
-        <div className="section-header" id="favorites-header">
-          <div className="section-title" id="favorites-title">
-            Customer <span>Favorites</span>
-          </div>
-        </div>
-        <div className="menu-grid" id="favoritesGrid">
-          {favoritesFiltered.length > 0 ? (
-            favoritesFiltered.map((d) => (
-              <DishCard
-                key={`favorite-dish-${d.id}`}
-                dish={d}
-                idPrefix="fav"
-                onClick={() => setSelectedDish(d)}
-              />
-            ))
-          ) : (
-            <p className="col-span-full py-8 text-center" style={{ color: 'var(--text-muted)' }} id="no-favorites-found">
-              No favorites found for this filter or search.
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* ABOUT SECTION */}
-      <section className="section" id="about">
-        <div className="section-header" id="about-header">
-          <div className="section-title" id="about-title">
-            About <span>{restaurantInfo.name}</span>
-          </div>
-        </div>
-        <div className="about-box" id="aboutBox">
-          <div id="about-story-col">
-            {aboutInfo.story.map((para, i) => (
-              <p key={`story-para-${i}`} style={{ marginTop: i ? '12px' : '0px' }}>
-                {para}
-              </p>
-            ))}
-          </div>
-          <div className="about-points" id="about-points-col">
-            {aboutInfo.highlights.map((h, index) => (
-              <div key={`highlight-${index}`} className="about-pill">
-                {h}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* RESTAURANT INFORMATION GRID */}
-      <section className="section" style={{ paddingTop: '0' }} id="info">
-        <div className="section-header" id="info-header">
-          <div className="section-title" id="info-title">
-            Restaurant <span>Information</span>
-          </div>
-        </div>
-        <div className="cards-3" id="restaurantInfoGrid">
-          <div className="info-card" id="info-card-address">
-            <h3>📍 Address</h3>
-            <p>{restaurantInfo.address}</p>
-          </div>
-          <div className="info-card" id="info-card-phone">
-            <h3>📞 Phone</h3>
-            <p>{restaurantInfo.phone}</p>
-          </div>
-          <div className="info-card" id="info-card-hours">
-            <h3>🕒 Opening Hours</h3>
-            <p>{restaurantInfo.openingHours}</p>
-          </div>
-          <div className="info-card" id="info-card-instagram">
-            <h3>📷 Instagram</h3>
-            <p>{restaurantInfo.instagram}</p>
-          </div>
-          <div className="info-card" id="info-card-website">
-            <h3>🌐 Website</h3>
-            <p>{restaurantInfo.website}</p>
-          </div>
-          <div className="info-card" id="info-card-style">
-            <h3>🍽️ Dining Style</h3>
-            <p>{restaurantInfo.diningStyle}</p>
-          </div>
-        </div>
-
-        {/* DYNAMIC CHAT BOOKING CTA CONTAINER */}
-        {restaurantInfo.contactActiveChannel !== 'disabled' && (
-          <div className="mt-10 bg-white p-6 sm:p-8 rounded-3xl border border-orange-500/15 shadow-md max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6" id="bookingActionBanner">
-            <div className="space-y-1.5 text-center md:text-left">
-              <span className="bg-orange-50 text-orange-950 text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full border border border-orange-100">
-                ⚡ Direct Chat Desk
-              </span>
-              <h3 className="font-bold text-lg text-gray-900 mt-2">Book a Table & Inquire Instantly</h3>
-              <p className="text-xs text-gray-500 leading-relaxed max-w-lg">
-                Coordinate with our reservations host instantly via your favorite messenger. Simple contact initiation with no payment and no authorization required.
-              </p>
-            </div>
-            
-            <div className="flex flex-wrap gap-3 justify-center">
-              {(restaurantInfo.contactActiveChannel === 'whatsapp' || restaurantInfo.contactActiveChannel === 'both') && (
-                <a
-                  href={`https://wa.me/${restaurantInfo.whatsappNumber?.replace(/\+/g, '')}?text=${encodeURIComponent(restaurantInfo.whatsappMessage || '')}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  id="ctaWhatsAppBtn"
-                  className="bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-3 px-5 rounded-xl text-xs transition-transform shadow-sm hover:-translate-y-0.5 flex items-center gap-2"
+        {visible.length === 0 ? (
+          <p className="mt-12 text-center text-sm text-husk">
+            No dishes match that search.
+          </p>
+        ) : (
+          <div className="mt-9 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {visible.map((d, i) => (
+              <Reveal key={d.id} delay={Math.min(i, 6) * 60}>
+                <article
+                  onClick={() => setSelected(d)}
+                  className="group h-full cursor-pointer overflow-hidden rounded-3xl border border-line bg-coal transition-shadow hover:shadow-[0_18px_50px_rgba(0,0,0,0.10)]"
                 >
-                  <span className="text-sm">💬</span> WhatsApp Host
-                </a>
-              )}
-              {(restaurantInfo.contactActiveChannel === 'line' || restaurantInfo.contactActiveChannel === 'both') && (
-                <a
-                  href={`https://line.me/R/ti/p/~${restaurantInfo.lineId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  id="ctaLineBtn"
-                  className="bg-[#06C755] hover:bg-[#05b04b] text-white font-bold py-3 px-5 rounded-xl text-xs transition-transform shadow-sm hover:-translate-y-0.5 flex items-center gap-2"
-                >
-                  <span className="text-sm">💚</span> LINE Chat Advisor
-                </a>
-              )}
-            </div>
+                  {d.image && (
+                    <img
+                      src={d.image}
+                      alt={d.name}
+                      loading="lazy"
+                      className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    />
+                  )}
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-display text-lg leading-tight text-cream">
+                        {d.name}
+                      </h3>
+                      <span className="shrink-0 text-sm font-semibold text-amber">
+                        {thb(d.priceTHB)}
+                      </span>
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-sm text-sand">{d.description}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Chip>{d.veg ? "Veg" : "Non-veg"}</Chip>
+                      {d.spiceLevel && <Chip>{d.spiceLevel}</Chip>}
+                      {d.chefSpecial && <Chip>Chef&apos;s pick</Chip>}
+                      {d.bestseller && <Chip>Popular</Chip>}
+                    </div>
+                  </div>
+                </article>
+              </Reveal>
+            ))}
           </div>
         )}
+        <p className="mt-10 text-center text-xs text-husk">
+          Prices in Thai Baht. Dine-in and table reservations by phone — we do not
+          take online orders.
+        </p>
       </section>
 
-      {/* GALLERY & AMBIENCE */}
-      <section className="section" style={{ paddingTop: '0' }} id="gallery-section">
-        <div className="section-header" id="gallery-header">
-          <div className="section-title" id="gallery-title">
-            Gallery <span>& Ambience</span>
+      {/* About */}
+      {about && (
+        <section id="about" className="border-y border-line/60 bg-ink2">
+          <div className="mx-auto max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid lg:grid-cols-12">
+            <div className="lg:col-span-7">
+              <Reveal>
+                <h2 className="font-display text-3xl text-cream sm:text-4xl">Our story</h2>
+              </Reveal>
+              {about.story.map((p, i) => (
+                <Reveal key={i} delay={80 + i * 70}>
+                  <p className="mt-4 text-[15px] leading-relaxed text-sand">{p}</p>
+                </Reveal>
+              ))}
+            </div>
+            <div className="mt-10 lg:col-span-5 lg:mt-0">
+              <ul className="space-y-3">
+                {about.highlights.map((h, i) => (
+                  <Reveal key={i} delay={i * 70}>
+                    <li className="rounded-2xl border border-line bg-coal px-5 py-4 text-sm text-sand">
+                      {h}
+                    </li>
+                  </Reveal>
+                ))}
+              </ul>
+            </div>
           </div>
-        </div>
-        <div className="gallery-grid" id="galleryGrid">
-          {sortedGallery.map((g, index) => (
-            <img
-              key={`gallery-${index}`}
-              className={g.tall ? 'tall' : ''}
-              src={g.image}
-              alt={g.alt}
-              loading="lazy"
-              id={`gallery-img-${index}`}
-            />
-          ))}
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* FOOTER */}
-      <footer id="footer">
-        <div className="footer-grid" id="footer-layout">
-          <div id="footer-branding-col">
-            <div className="footer-logo" id="footer-logo-title">{restaurantInfo.name}</div>
-            <p>
-              Premium restaurant menu experience with authentic flavors, elegant ambience, and chef-crafted cuisine.
-            </p>
+      {/* Gallery */}
+      {gallery.length > 0 && (
+        <section id="gallery" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <Reveal>
+            <h2 className="font-display text-3xl text-cream sm:text-4xl">From the pass</h2>
+          </Reveal>
+          <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+            {gallery
+              .slice()
+              .sort((a, b) => a.displayOrder - b.displayOrder)
+              .map((g, i) => (
+                <Reveal key={g.id} delay={Math.min(i, 6) * 50}>
+                  <img
+                    src={g.image}
+                    alt={g.alt}
+                    loading="lazy"
+                    className={`w-full rounded-2xl border border-line object-cover ${
+                      g.tall ? "h-80" : "h-40"
+                    }`}
+                  />
+                </Reveal>
+              ))}
           </div>
-          <div id="footer-restaurant-col">
-            <h4>Restaurant</h4>
-            <ul id="footerRestaurantInfo">
-              <li>📍 {restaurantInfo.address}</li>
-              <li>📞 {restaurantInfo.phone}</li>
-              <li>🕒 {restaurantInfo.openingHours}</li>
-            </ul>
+        </section>
+      )}
+
+      {/* Contact / footer */}
+      <footer id="contact" className="border-t border-line/60 bg-ink2">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 md:grid-cols-3">
+          <div>
+            <p className="font-display text-xl text-cream">{info?.name ?? "Namaste Siam"}</p>
+            <p className="mt-3 text-sm text-sand">{info?.address}</p>
           </div>
-          <div id="footer-links-col">
-            <h4>Links</h4>
-            <ul>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setSelectedInfoType('about')}
-                  className="hover:text-[var(--orange)] transition-colors text-left"
-                  style={{ background: 'none', border: 'none', padding: 0, color: 'rgba(255,255,255,0.68)', cursor: 'pointer' }}
-                  id="foot-btn-about"
-                >
-                  About
-                </button>
-              </li>
-              <li style={{ marginTop: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedInfoType('contact')}
-                  className="hover:text-[var(--orange)] transition-colors text-left"
-                  style={{ background: 'none', border: 'none', padding: 0, color: 'rgba(255,255,255,0.68)', cursor: 'pointer' }}
-                  id="foot-btn-contact"
-                >
-                  Contact
-                </button>
-              </li>
-              <li style={{ marginTop: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedInfoType('privacy')}
-                  className="hover:text-[var(--orange)] transition-colors text-left"
-                  style={{ background: 'none', border: 'none', padding: 0, color: 'rgba(255,255,255,0.68)', cursor: 'pointer' }}
-                  id="foot-btn-privacy"
-                >
-                  Privacy Policy
-                </button>
-              </li>
-              <li style={{ marginTop: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedInfoType('terms')}
-                  className="hover:text-[var(--orange)] transition-colors text-left"
-                  style={{ background: 'none', border: 'none', padding: 0, color: 'rgba(255,255,255,0.68)', cursor: 'pointer' }}
-                  id="foot-btn-terms"
-                >
-                  Terms
-                </button>
-              </li>
-            </ul>
+          <div className="text-sm text-sand">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-husk">Hours</p>
+            <p className="mt-2 whitespace-pre-line">{info?.openingHours}</p>
+          </div>
+          <div className="text-sm text-sand">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-husk">Reach us</p>
+            {info?.phone && (
+              <p className="mt-2">
+                <a href={`tel:${info.phone.replace(/\s/g, "")}`} className="hover:text-amber">
+                  {info.phone}
+                </a>
+              </p>
+            )}
+            {info?.instagram && (
+              <p className="mt-1">
+                <a href={info.instagram} className="hover:text-amber" rel="noreferrer noopener">
+                  Instagram
+                </a>
+              </p>
+            )}
           </div>
         </div>
-        <div className="footer-bottom" id="footer-copyright-note">
-          © 2026 {restaurantInfo.name}. All rights reserved.
+        <div className="border-t border-line/60 py-5 text-center text-xs text-husk">
+          © {new Date().getFullYear()} {info?.name ?? "Namaste Siam Indian Kitchen"}
         </div>
       </footer>
 
-      {/* DISH DETAILS MODAL */}
-      <div
-        id="dishModal"
-        className={`modal ${selectedDish ? 'open' : ''}`}
-        aria-hidden={!selectedDish}
-        onClick={(e) => {
-          if (e.target instanceof HTMLElement && e.target.id === 'dishModal') {
-            setSelectedDish(null);
-          }
-        }}
-      >
-        <div className="relative w-full max-w-[920px] mx-auto px-3" id="dish-modal-container">
-          <button
-            className="modal-close"
-            onClick={() => setSelectedDish(null)}
-            aria-label="Close modal"
-            id="close-dish-modal"
+      {/* Dish detail modal — informational only, no add-to-cart */}
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[85vh] w-full max-w-lg overflow-auto rounded-3xl border border-line bg-coal"
           >
-            ✕
-          </button>
-          
-          {selectedDish && (
-            <div className="modal-content" id="dishModalContent">
-              <img className="modal-img" src={selectedDish.image} alt={selectedDish.name} />
-              <div className="modal-details" id={`modal-details-${selectedDish.id}`}>
-                <h2 className="modal-title" id="modal-dish-name">{selectedDish.name}</h2>
-                <p className="modal-desc" id="modal-dish-desc">{selectedDish.description}</p>
-                <div className="modal-price" id="modal-dish-price">฿{selectedDish.priceTHB}</div>
-                <div className="meta-row" id="modal-dish-meta">
-                  <span className={`badge ${selectedDish.type === 'veg' ? 'green' : ''}`}>
-                    {selectedDish.type === 'veg' ? 'Veg' : 'Non-Veg'}
-                  </span>
-                  {selectedDish.chefSpecial && <span className="badge">Chef Special</span>}
-                  {selectedDish.bestseller && <span className="badge">Bestseller</span>}
-                  <span className="badge">{selectedDish.spiceLevel}</span>
-                </div>
-                <h4 style={{ fontFamily: "'Syne', sans-serif", marginTop: '10px', fontWeight: 700 }} id="modal-dish-ingredients-title">Ingredients</h4>
-                <div className="ingredients" style={{ marginTop: '10px' }} id="modal-dish-ingredients-tags">
-                  {selectedDish.ingredients.map((ing, i) => (
-                    <span key={`modal-ing-${selectedDish.id}-${i}`} className="ingredient">{ing}</span>
+            {selected.image && (
+              <img src={selected.image} alt={selected.name} className="h-56 w-full object-cover" />
+            )}
+            <div className="p-6">
+              <div className="flex items-start justify-between gap-4">
+                <h3 className="font-display text-2xl text-cream">{selected.name}</h3>
+                <span className="text-base font-semibold text-amber">
+                  {thb(selected.priceTHB)}
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-sand">{selected.description}</p>
+              {selected.ingredients.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {selected.ingredients.map((ing) => (
+                    <Chip key={ing}>{ing}</Chip>
                   ))}
                 </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* METAMODAL FOR SYSTEM / FOOTER LINKS */}
-      <div
-        id="infoModal"
-        className={`modal ${selectedInfoType ? 'open' : ''}`}
-        aria-hidden={!selectedInfoType}
-        onClick={(e) => {
-          if (e.target instanceof HTMLElement && e.target.id === 'infoModal') {
-            setSelectedInfoType(null);
-          }
-        }}
-      >
-        <div className="relative w-full max-w-[640px] mx-auto px-3" id="info-modal-container">
-          <button
-            className="modal-close"
-            onClick={() => setSelectedInfoType(null)}
-            aria-label="Close modal"
-            id="close-info-modal"
-          >
-            ✕
-          </button>
-          
-          <div className="modal-content" style={{ gridTemplateColumns: '1fr' }} id="infoModalContent">
-            <div className="modal-details" id="infoModalBody">
-              {selectedInfoType === 'contact' ? (
-                <div className="space-y-6" id="customContactModalBody">
-                  <h2 className="modal-title font-bold text-gray-900 border-b pb-3 border-gray-100 flex items-center gap-2">
-                    📍 Contact & Reservation Desk
-                  </h2>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                    {/* General coordinates */}
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="text-[11px] font-bold uppercase text-orange-950 tracking-wider">Restaurant Address</h4>
-                        <p className="text-sm text-gray-600 mt-1 leading-relaxed">📍 {restaurantInfo.address}</p>
-                      </div>
-                      <div>
-                        <h4 className="text-[11px] font-bold uppercase text-orange-950 tracking-wider">Opening Hours</h4>
-                        <p className="text-sm text-gray-600 mt-1">🕒 {restaurantInfo.openingHours}</p>
-                      </div>
-                      <div>
-                        <h4 className="text-[11px] font-bold uppercase text-orange-950 tracking-wider">Telephone Line</h4>
-                        <p className="text-sm text-orange-900 font-bold mt-1">
-                          <a href={`tel:${restaurantInfo.phone}`} className="hover:underline">📞 {restaurantInfo.phone}</a>
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Instant Messaging Channels */}
-                    <div className="bg-orange-50/10 border border-orange-500/10 p-5 rounded-2xl space-y-4">
-                      <div>
-                        <h4 className="text-[11px] font-bold uppercase text-gray-800 tracking-wider">Instant Chat Booking</h4>
-                        <p className="text-xs text-gray-500 mt-1">Choose any active channel to coordinate with our reservation team.</p>
-                      </div>
-
-                      {restaurantInfo.contactActiveChannel === 'disabled' ? (
-                        <div className="text-xs text-gray-400 italic py-4">
-                          Direct chat messengers are currently offline. Please call our landline for tables!
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {(restaurantInfo.contactActiveChannel === 'whatsapp' || restaurantInfo.contactActiveChannel === 'both') && (
-                            <div className="space-y-1">
-                              <a
-                                href={`https://wa.me/${restaurantInfo.whatsappNumber?.replace(/\+/g, '')}?text=${encodeURIComponent(restaurantInfo.whatsappMessage || '')}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="w-full bg-[#25D366] hover:bg-[#1ebd53] text-white font-bold py-3 px-4 rounded-xl text-xs transition-with shadow-sm text-center block"
-                                id="modalWhatsAppAction"
-                              >
-                                💬 WhatsApp Reservation
-                              </a>
-                              {restaurantInfo.whatsappNumber && (
-                                <p className="text-[10px] text-gray-400 text-center">Number: {restaurantInfo.whatsappNumber}</p>
-                              )}
-                            </div>
-                          )}
-
-                          {(restaurantInfo.contactActiveChannel === 'line' || restaurantInfo.contactActiveChannel === 'both') && (
-                            <div className="space-y-2 pt-1 border-t border-dashed border-gray-100">
-                              <a
-                                href={`https://line.me/R/ti/p/~${restaurantInfo.lineId}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="w-full bg-[#06C755] hover:bg-[#05b04b] text-white font-bold py-3 px-4 rounded-xl text-xs transition-with shadow-sm text-center block"
-                                id="modalLineAction"
-                              >
-                                💚 LINE Chat Coordinator
-                              </a>
-                              
-                              {restaurantInfo.lineId && (
-                                <div className="flex flex-col items-center gap-1">
-                                  <span className="block text-[10px] text-gray-400 font-bold">LINE ID: @{restaurantInfo.lineId}</span>
-                                  <div className="p-1.5 border bg-white rounded-lg inline-block">
-                                    <img 
-                                      src={restaurantInfo.lineQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://line.me/R/ti/p/~${restaurantInfo.lineId}`} 
-                                      alt="LINE scan QR code" 
-                                      className="w-24 h-24 object-contain"
-                                      onError={(e) => {
-                                        (e.target as HTMLImageElement).src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://line.me/R/ti/p/~${restaurantInfo.lineId}`;
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                infoModalData && (
-                  <>
-                    <h2 className="modal-title" id="info-modal-title">{infoModalData.title}</h2>
-                    <p 
-                      className="modal-desc whitespace-pre-wrap" 
-                      id="info-modal-body"
-                      style={{ fontSize: '1rem', lineHeight: '1.7', marginTop: '14px' }}
-                    >
-                      {infoModalData.body}
-                    </p>
-                  </>
-                )
               )}
+              <button
+                onClick={() => setSelected(null)}
+                className="mt-6 h-11 w-full rounded-full border border-line text-sm text-sand hover:border-amber/50 hover:text-amber"
+              >
+                Close
+              </button>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* FLOATING ACTION MESSENGER FOR USER CONVENIENCE */}
-      {restaurantInfo && restaurantInfo.contactActiveChannel !== 'disabled' && (
-        <div className="fixed bottom-6 right-6 z-[95] flex flex-col items-end gap-3 pointer-events-auto" id="floatingChatEngagement">
-          {/* Active Option Buttons */}
-          <div className="flex flex-col gap-2 items-end">
-            {(restaurantInfo.contactActiveChannel === 'whatsapp' || restaurantInfo.contactActiveChannel === 'both') && (
-              <a
-                href={`https://wa.me/${restaurantInfo.whatsappNumber?.replace(/\+/g, '')}?text=${encodeURIComponent(restaurantInfo.whatsappMessage || '')}`}
-                target="_blank"
-                rel="noreferrer"
-                id="floatingWhatsAppBtn"
-                className="flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-2.5 px-4 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95 text-xs tracking-wide"
-              >
-                <span>💬</span> WhatsApp
-              </a>
-            )}
-            {(restaurantInfo.contactActiveChannel === 'line' || restaurantInfo.contactActiveChannel === 'both') && (
-              <a
-                href={`https://line.me/R/ti/p/~${restaurantInfo.lineId}`}
-                target="_blank"
-                rel="noreferrer"
-                id="floatingLineBtn"
-                className="flex items-center gap-2 bg-[#06C755] hover:bg-[#05b04b] text-white font-bold py-2.5 px-4 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95 text-xs tracking-wide"
-              >
-                <span>💚</span> LINE
-              </a>
-            )}
-          </div>
-          
-          {/* Main Indicator */}
-          <div className="bg-[#3D1F00] text-[#FFF8F0] border border-orange-500/20 p-3.5 rounded-full shadow-xl flex items-center justify-center animate-bounce cursor-pointer hover:bg-[#1A0F00] transition-colors" title="Contact Us Instantly">
-            <span className="text-xs font-bold leading-none select-none tracking-wide flex items-center gap-1">
-              ⚡ Chat Book
-            </span>
           </div>
         </div>
       )}
     </div>
   );
+}
+
+/* ========================================================================== */
+/* Admin surface (only mounted behind /unlock-admin?k=…)                       */
+/* ========================================================================== */
+
+function AdminLogin({
+  onSubmit,
+}: {
+  onSubmit: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+}) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="grid min-h-screen place-items-center bg-ink px-4">
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          setError(null);
+          const res = await onSubmit(email.trim(), password);
+          if (!res.ok) setError(res.error ?? "Sign-in failed.");
+          setBusy(false);
+        }}
+        className="w-full max-w-sm rounded-3xl border border-line bg-coal p-7"
+      >
+        <h1 className="font-display text-2xl text-cream">Staff sign in</h1>
+        <p className="mt-2 text-xs leading-relaxed text-husk">
+          This link only hides the form. Access is granted by your account
+          credentials and admin role, verified on the server.
+        </p>
+
+        <label className="mt-6 block text-xs font-semibold uppercase tracking-wider text-husk">
+          Email
+        </label>
+        <input
+          type="email"
+          autoComplete="username"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="mt-2 h-11 w-full rounded-xl border border-line bg-ink px-4 text-sm text-cream outline-none focus:border-amber/60"
+        />
+
+        <label className="mt-4 block text-xs font-semibold uppercase tracking-wider text-husk">
+          Password
+        </label>
+        <input
+          type="password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="mt-2 h-11 w-full rounded-xl border border-line bg-ink px-4 text-sm text-cream outline-none focus:border-amber/60"
+        />
+
+        {error && <p className="mt-4 text-sm text-danger">{error}</p>}
+
+        <button
+          type="submit"
+          disabled={busy}
+          className="mt-6 h-11 w-full rounded-full bg-amber text-sm font-semibold text-ink transition-colors hover:bg-amberhi disabled:opacity-60"
+        >
+          {busy ? "Signing in…" : "Sign in"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function AdminDashboard({
+  email,
+  onSignOut,
+}: {
+  email: string | null;
+  onSignOut: () => void;
+}) {
+  const [rows, setRows] = useState<Dish[]>([]);
+  const [state, setState] = useState<LoadState>("loading");
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setState("loading");
+    try {
+      setRows(await AdminData.listAllDishes());
+      setState("ready");
+    } catch (e: any) {
+      setError(e?.message ?? "Load failed");
+      setState("error");
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const remove = async (d: Dish) => {
+    if (!window.confirm(`Permanently delete “${d.name}”? This cannot be undone.`)) return;
+    setError(null);
+    try {
+      await AdminData.deleteDish(d.id);
+      // Re-read from Supabase so the UI can never show a stale/optimistic list.
+      await refresh();
+      setMessage(`Deleted “${d.name}”.`);
+    } catch (e: any) {
+      setError(e?.message ?? "Delete failed — check your admin role and RLS policy.");
+    }
+  };
+
+  const toggleActive = async (d: Dish) => {
+    setError(null);
+    try {
+      await AdminData.setDishActive(d.id, !d.active);
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message ?? "Update failed.");
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-ink text-cream">
+      <header className="border-b border-line/70 bg-ink2">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <div>
+            <p className="font-display text-xl text-cream">Kitchen admin</p>
+            <p className="text-xs text-husk">{email}</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => void refresh()}
+              className="h-10 rounded-full border border-line px-4 text-sm text-sand hover:border-amber/50 hover:text-amber"
+            >
+              Refresh
+            </button>
+            <button
+              onClick={onSignOut}
+              className="h-10 rounded-full bg-amber px-4 text-sm font-semibold text-ink hover:bg-amberhi"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+        {message && <p className="mb-4 text-sm text-ok">{message}</p>}
+        {error && <p className="mb-4 text-sm text-danger">{error}</p>}
+
+        {state === "loading" && <p className="text-sm text-sand">Loading dishes…</p>}
+        {state === "error" && (
+          <p className="text-sm text-danger">Could not load dishes. {error}</p>
+        )}
+
+        {state === "ready" && (
+          <div className="overflow-hidden rounded-2xl border border-line">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-ink2 text-xs uppercase tracking-wider text-husk">
+                <tr>
+                  <th className="px-4 py-3">Dish</th>
+                  <th className="px-4 py-3">Category</th>
+                  <th className="px-4 py-3">Price</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((d) => (
+                  <tr key={d.id} className="border-t border-line/70">
+                    <td className="px-4 py-3 text-cream">{d.name}</td>
+                    <td className="px-4 py-3 text-sand">{d.category}</td>
+                    <td className="px-4 py-3 text-sand">{thb(d.priceTHB)}</td>
+                    <td className="px-4 py-3">
+                      <span className={d.active ? "text-ok" : "text-husk"}>
+                        {d.active ? "Live" : "Hidden"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => void toggleActive(d)}
+                          className="h-9 rounded-full border border-line px-3 text-xs text-sand hover:border-amber/50 hover:text-amber"
+                        >
+                          {d.active ? "Hide" : "Show"}
+                        </button>
+                        <button
+                          onClick={() => void remove(d)}
+                          className="h-9 rounded-full border border-danger/50 px-3 text-xs text-danger hover:bg-danger/10"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-sm text-husk">
+                      No dishes in the database. Nothing is auto-seeded — add dishes
+                      deliberately.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+/** Rendered for a wrong/missing key: indistinguishable from a real 404. */
+function NotFound() {
+  return (
+    <div className="grid min-h-screen place-items-center bg-ink px-6 text-center">
+      <div>
+        <p className="font-display text-5xl text-cream">404</p>
+        <p className="mt-3 text-sm text-sand">This page could not be found.</p>
+        <a
+          href="/"
+          className="mt-6 inline-flex h-11 items-center rounded-full bg-amber px-6 text-sm font-semibold text-ink hover:bg-amberhi"
+        >
+          Back to the restaurant
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function AdminRoute() {
+  const { session, signIn, signOut } = useAdminSession(true);
+
+  if (session.status === "checking") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-ink text-sand">
+        <span className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-amber" />
+      </div>
+    );
+  }
+  if (session.status === "anon") return <AdminLogin onSubmit={signIn} />;
+  if (session.status === "denied") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-ink px-6 text-center">
+        <div>
+          <p className="font-display text-2xl text-cream">Not authorised</p>
+          <p className="mt-3 text-sm text-sand">
+            This account is signed in but has no admin role.
+          </p>
+          <button
+            onClick={() => void signOut()}
+            className="mt-6 h-11 rounded-full border border-line px-6 text-sm text-sand hover:border-amber/50 hover:text-amber"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return <AdminDashboard email={session.email} onSignOut={() => void signOut()} />;
+}
+
+/* ========================================================================== */
+/* Root                                                                        */
+/* ========================================================================== */
+
+export default function App() {
+  const { path, search } = useLocation();
+
+  const normalized = path.replace(/\/+$/, "") || "/";
+
+  if (normalized === "/unlock-admin") {
+    const provided = new URLSearchParams(search).get("k") ?? "";
+    if (!keyMatches(provided)) return <NotFound />;
+    return <AdminRoute />;
+  }
+
+  // Legacy /admin path is no longer an entry point.
+  if (normalized === "/admin") return <NotFound />;
+
+  return <PublicSite />;
 }
