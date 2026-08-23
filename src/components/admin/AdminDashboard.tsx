@@ -138,31 +138,23 @@ export default function AdminDashboard({
   };
 
   const handleSaveDishSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dishForm.name?.trim() || !dishForm.description?.trim()) {
-      showToast('Name and Description are required parameters.', 'error');
-      return;
-    }
-    if ((dishForm.priceTHB ?? 0) < 0) {
-      showToast('Price cannot be a negative value.', 'error');
-      return;
-    }
-
-    setIsSaving(true);
-    await new Promise(r => setTimeout(r, 600));
-
+  e.preventDefault();
+  if (!dishForm.name?.trim() || !dishForm.description?.trim()) {
+    showToast('Name and Description are required.', 'error');
+    return;
+  }
+  setIsSaving(true);
+  try {
     if (editingDish) {
-      let updated = dishes.map(d => d.id === editingDish.id ? { ...d, ...dishForm } as Dish : d);
-      if (dishForm.todaySpecial) {
-        updated = updated.map(d => d.id === editingDish.id ? d : { ...d, todaySpecial: false });
-      }
-      onUpdateDishes(updated);
-      showToast(`Dish "${dishForm.name}" updated successfully!`);
+      const updatedDish = { ...editingDish, ...dishForm } as Dish;
+      const savedDish = await MenuService.saveDish(updatedDish);
+      const updatedDishes = dishes.map(d => d.id === savedDish.id ? savedDish : d);
+      onUpdateDishes(updatedDishes);
+      showToast(`Dish "${savedDish.name}" updated successfully!`);
       setEditingDish(null);
     } else {
-      // ✅ FIX: Safely handle both string UUIDs and number IDs
       const numericIds = dishes.map(d => Number(d.id)).filter(n => !isNaN(n));
-      const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : Date.now();
+      const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
       const nextOrder = dishes.length > 0 ? Math.max(...dishes.map(d => d.display_order || 0)) + 1 : 1;
       const newDish = {
         ...dishForm,
@@ -171,35 +163,39 @@ export default function AdminDashboard({
         display_order_today: dishForm.display_order_today || nextOrder,
         display_order_chef: dishForm.display_order_chef || nextOrder,
         display_order_popular: dishForm.display_order_popular || nextOrder,
-        display_order_favorite: dishForm.display_order_favorite || nextOrder
+        display_order_favorite: dishForm.display_order_favorite || nextOrder,
+        active: true
       } as Dish;
-      let updated = [newDish, ...dishes];
-      if (dishForm.todaySpecial) {
-        updated = updated.map(d => d.id === nextId ? d : { ...d, todaySpecial: false });
-      }
-      onUpdateDishes(updated);
-      showToast(`Dish "${dishForm.name}" added to menu successfully!`);
+      
+      const savedDish = await MenuService.saveDish(newDish);
+      const updatedDishes = [savedDish, ...dishes];
+      onUpdateDishes(updatedDishes);
+      showToast(`Dish "${savedDish.name}" added successfully!`);
     }
-
-    setIsSaving(false);
     handleCancelEditDish();
-  };
+  } catch (err) {
+    console.error('Failed to save dish:', err);
+    showToast(err instanceof Error ? err.message : 'Failed to save dish to database.', 'error');
+  } finally {
+    setIsSaving(false);
+  }
+};
 
     const handleToggleDisableDish = async (dish: Dish) => {
-    setIsSaving(true);
-    try {
-      const active = !dish.active;
-      const updated = dishes.map(d => d.id === dish.id ? { ...d, active } : d);
-      await MenuService.saveDishes(updated);
-      onUpdateDishes(updated);
-      showToast(active ? 'Re-enabled' : 'Disabled', 'info');
-    } catch (err) {
-      console.error('Failed to toggle dish active state:', err);
-      showToast(err instanceof Error ? err.message : 'Failed to toggle active state', 'error');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  setIsSaving(true);
+  try {
+    const updatedDish = { ...dish, active: !dish.active };
+    const savedDish = await MenuService.saveDish(updatedDish);
+    const updatedDishes = dishes.map(d => d.id === savedDish.id ? savedDish : d);
+    onUpdateDishes(updatedDishes);
+    showToast(savedDish.active ? 'Re-enabled successfully' : 'Disabled successfully', 'info');
+  } catch (err) {
+    console.error('Failed to toggle dish:', err);
+    showToast(err instanceof Error ? err.message : 'Failed to toggle state.', 'error');
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   const handleToggleDisableCategory = async (cat: Category) => {
     setIsSaving(true);
@@ -218,20 +214,15 @@ export default function AdminDashboard({
   };
 
   const handleDeleteDish = async (id: number, name: string) => {
-  if (window.confirm(`WARNING: You are about to PERMANENTLY delete and purge "${name}" from the database.\n\nThis action is completely IRREVERSIBLE and cannot be undone.\n\nAre you absolutely sure you want to PERMANENTLY purge this item?`)) {
+  if (window.confirm(`WARNING: You are about to PERMANENTLY delete "${name}" from the database.\n\nThis action is IRREVERSIBLE.\n\nAre you absolutely sure?`)) {
     setIsSaving(true);
     try {
-      console.log("🔴 AdminDashboard: Deleting dish", id, name);
       await MenuService.deleteDish(id);
-      
-      // Force re-fetch from database instead of just filtering local state
-      const freshDishes = await MenuService.getDishes();
-      onUpdateDishes(freshDishes);
-      
-      showToast(`Permanently deleted and purged "${name}".`, 'info');
-      console.log("✅ Dish deleted and UI refreshed from DB");
+      const updatedDishes = dishes.filter(d => d.id !== id);
+      onUpdateDishes(updatedDishes);
+      showToast(`Permanently deleted "${name}".`, 'info');
     } catch (err) {
-      console.error('❌ Failed to delete dish:', err);
+      console.error('Failed to delete dish:', err);
       showToast(err instanceof Error ? err.message : `Failed to delete "${name}".`, 'error');
     } finally {
       setIsSaving(false);
@@ -428,25 +419,30 @@ export default function AdminDashboard({
     showToast('Gallery item sort order updated successfully!');
   };
 
-  const handleUpdateDishActive = (dishId: number, active: boolean, actionType: string) => {
-    const updated = dishes.map(d => {
-      if (d.id === dishId) {
-        return { ...d, active };
-      }
-      return d;
-    });
-    onUpdateDishes(updated);
+  const handleUpdateDishActive = async (dishId: number, active: boolean, actionType: string) => {
+  setIsSaving(true);
+  try {
+    const dish = dishes.find(d => d.id === dishId);
+    if (!dish) return;
+    const updatedDish = { ...dish, active };
+    const savedDish = await MenuService.saveDish(updatedDish);
+    const updatedDishes = dishes.map(d => d.id === savedDish.id ? savedDish : d);
+    onUpdateDishes(updatedDishes);
     
     let label = 'updated';
     if (actionType === 'hidden') label = 'hidden from public view';
     if (actionType === 'disabled') label = 'disabled successfully';
-    if (actionType === 'soft_deleted') label = 'soft deleted (marked inactive)';
     if (actionType === 'shown') label = 'revealed to public website';
     if (actionType === 'enabled') label = 'enabled and active';
     if (actionType === 'restored') label = 'restored back to active status';
-
     showToast(`Dish was successfully ${label}!`);
-  };
+  } catch (err) {
+    console.error('Failed to update dish active state:', err);
+    showToast(err instanceof Error ? err.message : 'Failed to update state.', 'error');
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   const handleUpdateCategoryActive = (catId: string, active: boolean, actionType: string) => {
     const updated = categories.map(c => {
