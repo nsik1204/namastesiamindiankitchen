@@ -4,31 +4,24 @@ import { getSupabaseClient } from './supabaseClient';
 function requireClient() {
   const supabase = getSupabaseClient();
   if (!supabase) {
-    throw new Error('Supabase client is not configured. Set the Supabase URL and anon key environment variables.');
+    throw new Error('Supabase client is not configured.');
   }
   return supabase;
 }
 
 function fail(operation: string, error: unknown): never {
-  const message =
-    error && typeof error === 'object' && 'message' in (error as any)
-      ? (error as any).message
-      : String(error);
+  const message = error && typeof error === 'object' && 'message' in error 
+    ? (error as any).message 
+    : String(error);
   throw new Error(`Supabase ${operation} failed: ${message}`);
 }
 
 export function generateSlug(text: string): string {
   if (!text) return '';
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_]+/g, '-')
-    .replace(/-+/g, '-');
+  return text.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_]+/g, '-').replace(/-+/g, '-');
 }
 
 function mapDbDishToDish(db: any): Dish {
-  const normId = db.id || 1;
   return {
     id: db.id,
     slug: db.slug || generateSlug(db.name),
@@ -46,12 +39,12 @@ function mapDbDishToDish(db: any): Dish {
     customerFavorite: !!db.customer_favorite,
     todaySpecial: !!db.today_special,
     image: db.image_url,
-    display_order: db.display_order !== undefined && db.display_order !== null ? Number(db.display_order) : normId,
-    display_order_today: db.display_order_today !== undefined && db.display_order_today !== null ? Number(db.display_order_today) : normId,
-    display_order_chef: db.display_order_chef !== undefined && db.display_order_chef !== null ? Number(db.display_order_chef) : normId,
-    display_order_popular: db.display_order_popular !== undefined && db.display_order_popular !== null ? Number(db.display_order_popular) : normId,
-    display_order_favorite: db.display_order_favorite !== undefined && db.display_order_favorite !== null ? Number(db.display_order_favorite) : normId,
-    active: db.active !== undefined && db.active !== null ? !!db.active : (db.is_available !== undefined && db.is_available !== null ? !!db.is_available : true)
+    display_order: db.display_order ?? 1,
+    display_order_today: db.display_order_today ?? 1,
+    display_order_chef: db.display_order_chef ?? 1,
+    display_order_popular: db.display_order_popular ?? 1,
+    display_order_favorite: db.display_order_favorite ?? 1,
+    active: db.active !== undefined && db.active !== null ? !!db.active : true
   };
 }
 
@@ -81,6 +74,7 @@ function mapDishToRow(d: Dish): any {
     display_order_favorite: d.display_order_favorite || 0,
     updated_at: new Date().toISOString()
   };
+  // ✅ IMPORTANT: Always include ID if it exists (handles both UUID strings and numbers)
   if (d.id !== undefined && d.id !== null && d.id !== '') {
     row.id = d.id;
   }
@@ -93,8 +87,7 @@ function mapCategoryToRow(c: Category, idx: number): any {
     slug: c.slug || generateSlug(c.label || c.name || c.id),
     name: c.name || c.label || c.id,
     label: c.label || c.name || c.id,
-    sort_order: c.display_order !== undefined ? c.display_order : idx + 1,
-    display_order: c.display_order !== undefined ? c.display_order : idx + 1,
+    display_order: c.display_order ?? idx + 1,
     is_visible: c.active !== false,
     active: c.active !== false,
     updated_at: new Date().toISOString()
@@ -107,8 +100,7 @@ function mapGalleryToRow(item: GalleryItem, idx: number): any {
     image_url: item.image,
     alt_text: item.alt || item.title || '',
     is_tall: !!item.tall,
-    sort_order: item.display_order || idx + 1,
-    display_order: item.display_order || idx + 1,
+    display_order: item.display_order ?? idx + 1,
     active: item.active !== false,
     is_visible: item.active !== false,
     updated_at: new Date().toISOString()
@@ -127,9 +119,7 @@ export const MenuService = {
     const { data: chatList, error: chatError } = await supabase.from('chat_settings').select('*').limit(1);
     if (chatError) fail('read chat_settings', chatError);
     const infoRow = infoList?.[0];
-    if (!infoRow) {
-      throw new Error('No row found in restaurant_info. Add the restaurant profile row in the database.');
-    }
+    if (!infoRow) throw new Error('No row found in restaurant_info.');
     const chatRow = chatList?.[0] || {};
     return {
       name: infoRow.name,
@@ -164,6 +154,7 @@ export const MenuService = {
     if (existingInfo?.[0]?.id) infoRow.id = existingInfo[0].id;
     const { error: infoErr } = await supabase.from('restaurant_info').upsert(infoRow);
     if (infoErr) fail('save restaurant_info', infoErr);
+
     const { data: existingChat, error: readChatErr } = await supabase.from('chat_settings').select('id').limit(1);
     if (readChatErr) fail('read chat_settings', readChatErr);
     const chatRow: any = {
@@ -184,13 +175,8 @@ export const MenuService = {
     const { data, error } = await supabase.from('about_info').select('*').limit(1);
     if (error) fail('read about_info', error);
     const row = data?.[0];
-    if (!row) {
-      throw new Error('No row found in about_info. Add the about content row in the database.');
-    }
-    return {
-      story: row.story_paragraphs || [],
-      highlights: row.highlights || []
-    };
+    if (!row) throw new Error('No row found in about_info.');
+    return { story: row.story_paragraphs || [], highlights: row.highlights || [] };
   },
 
   async saveAboutInfo(about: AboutInfo): Promise<void> {
@@ -216,13 +202,10 @@ export const MenuService = {
       slug: c.slug || generateSlug(c.name || c.label || c.id),
       name: c.name || c.label || c.id,
       label: c.label || c.name || c.id,
-      display_order: c.display_order !== undefined && c.display_order !== null ? Number(c.display_order) : (Number(c.sort_order) || 0),
-      active: c.active !== undefined && c.active !== null ? !!c.active : (c.is_visible !== undefined && c.is_visible !== null ? !!c.is_visible : true)
+      display_order: c.display_order ?? Number(c.sort_order) ?? 0,
+      active: c.active !== undefined && c.active !== null ? !!c.active : true
     }));
-    return [
-      { id: 'all', slug: 'all', name: 'All', label: 'All', display_order: 0, active: true } as Category,
-      ...dbCats
-    ];
+    return [{ id: 'all', slug: 'all', name: 'All', label: 'All', display_order: 0, active: true } as Category, ...dbCats];
   },
 
   async saveCategories(cats: Category[]): Promise<void> {
@@ -261,12 +244,9 @@ export const MenuService = {
     const rows = allDishes.map(mapDishToRow);
     const { data: existing, error: readErr } = await supabase.from('foods').select('id');
     if (readErr) fail('read foods', readErr);
-    const keepIds = new Set(
-      rows.filter(r => r.id !== undefined && r.id !== null).map(r => String(r.id))
-    );
-    const removeIds = (existing || [])
-      .map((r: any) => String(r.id))
-      .filter((id: string) => !keepIds.has(id));
+    // ✅ Use String() for consistent comparison - handles both UUID and number IDs
+    const keepIds = new Set(rows.filter(r => r.id !== undefined && r.id !== null).map(r => String(r.id)));
+    const removeIds = (existing || []).map((r: any) => String(r.id)).filter((id: string) => !keepIds.has(id));
     if (rows.length > 0) {
       const { error } = await supabase.from('foods').upsert(rows, { onConflict: 'id' });
       if (error) fail('save dishes', error);
@@ -286,6 +266,7 @@ export const MenuService = {
     return mapDbDishToDish(data);
   },
 
+  // ✅ Accept both string and number to handle UUID and numeric IDs
   async deleteDish(id: string | number): Promise<void> {
     const supabase = requireClient();
     const { error } = await supabase.from('foods').delete().eq('id', id);
@@ -302,8 +283,8 @@ export const MenuService = {
       image: item.image_url,
       alt: item.alt_text || item.title || '',
       tall: !!item.is_tall,
-      display_order: item.display_order !== undefined && item.display_order !== null ? Number(item.display_order) : (Number(item.sort_order) || 0),
-      active: item.active !== undefined && item.active !== null ? !!item.active : (item.is_visible !== undefined && item.is_visible !== null ? !!item.is_visible : true)
+      display_order: item.display_order ?? Number(item.sort_order) ?? 0,
+      active: item.active !== undefined && item.active !== null ? !!item.active : true
     }));
   },
 
@@ -312,12 +293,8 @@ export const MenuService = {
     const rows = items.map(mapGalleryToRow);
     const { data: existing, error: readErr } = await supabase.from('gallery').select('id');
     if (readErr) fail('read gallery', readErr);
-    const keepIds = new Set(
-      rows.filter(r => r.id !== undefined && r.id !== null).map(r => String(r.id))
-    );
-    const removeIds = (existing || [])
-      .map((r: any) => String(r.id))
-      .filter((id: string) => !keepIds.has(id));
+    const keepIds = new Set(rows.filter(r => r.id !== undefined && r.id !== null).map(r => String(r.id)));
+    const removeIds = (existing || []).map((r: any) => String(r.id)).filter((id: string) => !keepIds.has(id));
     if (rows.length > 0) {
       const { error } = await supabase.from('gallery').upsert(rows, { onConflict: 'id' });
       if (error) fail('save gallery', error);
