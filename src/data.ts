@@ -30,7 +30,7 @@ export const ABOUT_INFO: AboutInfo = {
 
 export const CATEGORIES: Category[] = [
   { id: "all", slug: "all", name: "All", label: "All", display_order: 0, active: true },
-  { id: "starters", slug: "starters", name: "Starters", label: "Starters", display_order: 1, active: true },
+  { id: "appetizers", slug: "appetizers", name: "Appetizers", label: "Appetizers", display_order: 1, active: true },
   { id: "soups", slug: "soups", name: "Soups", label: "Soups", display_order: 2, active: true },
   { id: "salads", slug: "salads", name: "Salads", label: "Salads", display_order: 3, active: true },
   { id: "thai", slug: "thai-specials", name: "Thai Specials", label: "Thai Specials", display_order: 4, active: true },
@@ -76,7 +76,7 @@ export const DISHES: Dish[] = [
     name: "Paneer Tikka",
     description: "Char-grilled cottage cheese with smoky spices and mint.",
     priceTHB: 349,
-    category: "starters",
+    category: "appetizers",
     type: "veg",
     veg: true,
     spiceLevel: "🌶🌶 Medium",
@@ -100,7 +100,7 @@ export const DISHES: Dish[] = [
     name: "Chicken Satay",
     description: "Skewered chicken with rich peanut glaze.",
     priceTHB: 389,
-    category: "starters",
+    category: "appetizers",
     type: "nonveg",
     veg: false,
     spiceLevel: "🌶 Mild",
