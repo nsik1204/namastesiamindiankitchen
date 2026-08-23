@@ -535,7 +535,7 @@ export default function AdminDashboard({
         warningMsg = `WARNING: Category "${label}" has ${attachedDishesCount} linked cuisines. Deleting this key will leave those catalog items category-orphaned.\n\n`;
     }
 
-    if (!window.confirm(`${warningMsg}WARNING: You are about to PERMANENTLY delete and purge the Category "${label}".\n\nThis action is completely IRREVERSIBLE and cannot be undone.\n\nAre you absolutely sure you want to PERMANENTLY purge this category?`)) {
+    if (!window.confirm(`${warningMsg}Are you absolutely sure you want to PERMANENTLY purge this category?`)) {
         return;
     }
 

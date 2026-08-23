@@ -228,11 +228,12 @@ export const MenuService = {
     const supabase = requireClient();
     console.log("🔴 Attempting to delete category:", id);
     
+    // .select() returns deleted rows. If empty [], it means RLS blocked it or ID not found
     const { data, error } = await supabase
         .from('categories')
         .delete()
         .eq('id', id)
-        .select(); // Returns deleted row(s) or empty array
+        .select(); 
     
     if (error) {
         console.error("❌ Supabase delete error:", error);
@@ -241,7 +242,6 @@ export const MenuService = {
     
     console.log("✅ Supabase delete response:", data);
     if (!data || data.length === 0) {
-        console.warn("⚠️ WARNING: 0 rows deleted! Check RLS policies or if ID exists.");
         throw new Error(`Failed to delete category "${id}". It may not exist or RLS is blocking it.`);
     }
 },
