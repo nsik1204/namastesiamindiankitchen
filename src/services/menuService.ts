@@ -230,21 +230,25 @@ export const MenuService = {
     return (data || []).map(mapDbDishToDish);
   },
 
-  async saveDishes(allDishes: Dish[]): Promise<void> {
+    async saveDish(dish: Dish): Promise<Dish> {
     const supabase = requireClient();
-    const rows = allDishes.map(mapDishToRow);
-    const { data: existing, error: readErr } = await supabase.from('foods').select('id');
-    if (readErr) fail('read foods', readErr);
-    const keepIds = new Set(rows.filter(r => r.id !== undefined && r.id !== null).map(r => String(r.id)));
-    const removeIds = (existing || []).map((r: any) => String(r.id)).filter((id: string) => !keepIds.has(id));
-    if (rows.length > 0) {
-      const { error } = await supabase.from('foods').upsert(rows, { onConflict: 'id' });
-      if (error) fail('save dishes', error);
+    const row = mapDishToRow(dish);
+    
+    let query;
+    // If ID exists, use upsert (update/insert). If no ID, use insert (let DB generate ID).
+    if (row.id !== undefined && row.id !== null && row.id !== '') {
+      query = supabase.from('foods').upsert(row, { onConflict: 'id' });
+    } else {
+      // Remove id property if it's empty to avoid DB errors
+      delete row.id; 
+      query = supabase.from('foods').insert(row);
     }
-    if (removeIds.length > 0) {
-      const { error } = await supabase.from('foods').delete().in('id', removeIds);
-      if (error) fail('delete removed dishes', error);
-    }
+
+    const { data, error } = await query.select().single();
+    
+    if (error) fail(`save dish "${dish.name}"`, error);
+    if (!data) throw new Error(`Supabase save dish "${dish.name}" returned no row.`);
+    return mapDbDishToDish(data);
   },
 
   // ✅ FIXED: Single dish save with proper error handling

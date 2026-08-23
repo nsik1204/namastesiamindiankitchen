@@ -137,49 +137,63 @@ export default function AdminDashboard({
     });
   };
 
-  const handleSaveDishSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!dishForm.name?.trim() || !dishForm.description?.trim()) {
-    showToast('Name and Description are required.', 'error');
-    return;
-  }
-  setIsSaving(true);
-  try {
-    if (editingDish) {
-      const updatedDish = { ...editingDish, ...dishForm } as Dish;
-      const savedDish = await MenuService.saveDish(updatedDish);
-      const updatedDishes = dishes.map(d => d.id === savedDish.id ? savedDish : d);
-      onUpdateDishes(updatedDishes);
-      showToast(`Dish "${savedDish.name}" updated successfully!`);
-      setEditingDish(null);
-    } else {
-      const numericIds = dishes.map(d => Number(d.id)).filter(n => !isNaN(n));
-      const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
-      const nextOrder = dishes.length > 0 ? Math.max(...dishes.map(d => d.display_order || 0)) + 1 : 1;
-      const newDish = {
-        ...dishForm,
-        id: nextId,
-        display_order: dishForm.display_order || nextOrder,
-        display_order_today: dishForm.display_order_today || nextOrder,
-        display_order_chef: dishForm.display_order_chef || nextOrder,
-        display_order_popular: dishForm.display_order_popular || nextOrder,
-        display_order_favorite: dishForm.display_order_favorite || nextOrder,
-        active: true
-      } as Dish;
-      
-      const savedDish = await MenuService.saveDish(newDish);
-      const updatedDishes = [savedDish, ...dishes];
-      onUpdateDishes(updatedDishes);
-      showToast(`Dish "${savedDish.name}" added successfully!`);
+    const handleSaveDishSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dishForm.name?.trim() || !dishForm.description?.trim()) {
+      showToast('Name and Description are required parameters.', 'error');
+      return;
     }
-    handleCancelEditDish();
-  } catch (err) {
-    console.error('Failed to save dish:', err);
-    showToast(err instanceof Error ? err.message : 'Failed to save dish to database.', 'error');
-  } finally {
-    setIsSaving(false);
-  }
-};
+    if ((dishForm.priceTHB ?? 0) < 0) {
+      showToast('Price cannot be a negative value.', 'error');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (editingDish) {
+        // Update existing dish
+        const updatedDish = { ...editingDish, ...dishForm } as Dish;
+        const savedDish = await MenuService.saveDish(updatedDish);
+        
+        let updatedList = dishes.map(d => d.id === savedDish.id ? savedDish : d);
+        if (dishForm.todaySpecial) {
+          updatedList = updatedList.map(d => d.id === savedDish.id ? d : { ...d, todaySpecial: false });
+        }
+        onUpdateDishes(updatedList);
+        showToast(`Dish "${savedDish.name}" updated successfully!`);
+        setEditingDish(null);
+      } else {
+        // Add new dish - NO MANUAL ID GENERATION
+        const nextOrder = dishes.length > 0 ? Math.max(...dishes.map(d => d.display_order || 0)) + 1 : 1;
+        
+        // Create dish object WITHOUT an ID. Let the database generate it.
+        const newDishData = {
+          ...dishForm,
+          display_order: dishForm.display_order || nextOrder,
+          display_order_today: dishForm.display_order_today || nextOrder,
+          display_order_chef: dishForm.display_order_chef || nextOrder,
+          display_order_popular: dishForm.display_order_popular || nextOrder,
+          display_order_favorite: dishForm.display_order_favorite || nextOrder
+        } as Dish;
+
+        // Save to DB. The service will return the dish with the NEW database-generated ID.
+        const savedDish = await MenuService.saveDish(newDishData);
+
+        let updatedList = [savedDish, ...dishes];
+        if (dishForm.todaySpecial) {
+          updatedList = updatedList.map(d => d.id === savedDish.id ? d : { ...d, todaySpecial: false });
+        }
+        onUpdateDishes(updatedList);
+        showToast(`Dish "${savedDish.name}" added to menu successfully!`);
+      }
+    } catch (err) {
+      console.error('Failed to save dish:', err);
+      showToast(err instanceof Error ? err.message : 'Failed to save dish.', 'error');
+    } finally {
+      setIsSaving(false);
+      handleCancelEditDish();
+    }
+  };
 
     const handleToggleDisableDish = async (dish: Dish) => {
   setIsSaving(true);
