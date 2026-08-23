@@ -74,7 +74,6 @@ function mapDishToRow(d: Dish): any {
     display_order_favorite: d.display_order_favorite || 0,
     updated_at: new Date().toISOString()
   };
-  // ✅ IMPORTANT: Always include ID if it exists (handles both UUID strings and numbers)
   if (d.id !== undefined && d.id !== null && d.id !== '') {
     row.id = d.id;
   }
@@ -122,17 +121,12 @@ export const MenuService = {
     if (!infoRow) throw new Error('No row found in restaurant_info.');
     const chatRow = chatList?.[0] || {};
     return {
-      name: infoRow.name,
-      address: infoRow.address,
-      phone: infoRow.phone,
-      openingHours: infoRow.opening_hours,
-      instagram: infoRow.instagram,
-      website: infoRow.website,
-      diningStyle: infoRow.dining_style,
+      name: infoRow.name, address: infoRow.address, phone: infoRow.phone,
+      openingHours: infoRow.opening_hours, instagram: infoRow.instagram,
+      website: infoRow.website, diningStyle: infoRow.dining_style,
       whatsappNumber: chatRow.whatsapp_number || '',
       whatsappMessage: chatRow.whatsapp_default_message || '',
-      lineId: chatRow.line_id || '',
-      lineQrUrl: chatRow.line_qr_url || '',
+      lineId: chatRow.line_id || '', lineQrUrl: chatRow.line_qr_url || '',
       contactActiveChannel: (chatRow.contact_active_channel || 'both') as any
     };
   },
@@ -142,26 +136,20 @@ export const MenuService = {
     const { data: existingInfo, error: readInfoErr } = await supabase.from('restaurant_info').select('id').limit(1);
     if (readInfoErr) fail('read restaurant_info', readInfoErr);
     const infoRow: any = {
-      name: info.name,
-      address: info.address,
-      phone: info.phone,
-      opening_hours: info.openingHours,
-      instagram: info.instagram,
-      website: info.website,
-      dining_style: info.diningStyle,
+      name: info.name, address: info.address, phone: info.phone,
+      opening_hours: info.openingHours, instagram: info.instagram,
+      website: info.website, dining_style: info.diningStyle,
       updated_at: new Date().toISOString()
     };
     if (existingInfo?.[0]?.id) infoRow.id = existingInfo[0].id;
     const { error: infoErr } = await supabase.from('restaurant_info').upsert(infoRow);
     if (infoErr) fail('save restaurant_info', infoErr);
-
     const { data: existingChat, error: readChatErr } = await supabase.from('chat_settings').select('id').limit(1);
     if (readChatErr) fail('read chat_settings', readChatErr);
     const chatRow: any = {
       whatsapp_number: info.whatsappNumber || '',
       whatsapp_default_message: info.whatsappMessage || '',
-      line_id: info.lineId || '',
-      line_qr_url: info.lineQrUrl || '',
+      line_id: info.lineId || '', line_qr_url: info.lineQrUrl || '',
       contact_active_channel: info.contactActiveChannel || 'both',
       updated_at: new Date().toISOString()
     };
@@ -228,8 +216,10 @@ export const MenuService = {
 
   async deleteCategory(id: string): Promise<void> {
     const supabase = requireClient();
+    console.log("🔴 Deleting category:", id);
     const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) fail(`delete category "${id}"`, error);
+    console.log("✅ Category deleted successfully");
   },
 
   async getDishes(): Promise<Dish[]> {
@@ -244,7 +234,6 @@ export const MenuService = {
     const rows = allDishes.map(mapDishToRow);
     const { data: existing, error: readErr } = await supabase.from('foods').select('id');
     if (readErr) fail('read foods', readErr);
-    // ✅ Use String() for consistent comparison - handles both UUID and number IDs
     const keepIds = new Set(rows.filter(r => r.id !== undefined && r.id !== null).map(r => String(r.id)));
     const removeIds = (existing || []).map((r: any) => String(r.id)).filter((id: string) => !keepIds.has(id));
     if (rows.length > 0) {
@@ -266,11 +255,27 @@ export const MenuService = {
     return mapDbDishToDish(data);
   },
 
-  // ✅ Accept both string and number to handle UUID and numeric IDs
-  async deleteDish(id: string | number): Promise<void> {
+  // ✅ FIXED: Added .select() to verify deletion and detailed logging
+  async deleteDish(id: number): Promise<void> {
     const supabase = requireClient();
-    const { error } = await supabase.from('foods').delete().eq('id', id);
-    if (error) fail(`delete dish id ${id}`, error);
+    console.log(" Attempting to delete dish ID:", id);
+    
+    const { data, error } = await supabase
+      .from('foods')
+      .delete()
+      .eq('id', id)
+      .select(); // Returns deleted row(s) or empty array
+    
+    if (error) {
+      console.error("❌ Supabase delete error:", error);
+      fail(`delete dish id ${id}`, error);
+    }
+    
+    console.log("✅ Supabase delete response:", data);
+    if (!data || data.length === 0) {
+      console.warn("⚠️ WARNING: 0 rows deleted! Check RLS policies or if ID exists.");
+      throw new Error(`Failed to delete dish with ID ${id}. It may not exist or RLS is blocking it.`);
+    }
   },
 
   async getGalleryItems(): Promise<GalleryItem[]> {
@@ -307,7 +312,9 @@ export const MenuService = {
 
   async deleteGalleryItem(id: string | number): Promise<void> {
     const supabase = requireClient();
+    console.log(" Deleting gallery item:", id);
     const { error } = await supabase.from('gallery').delete().eq('id', id);
     if (error) fail(`delete gallery item ${id}`, error);
+    console.log("✅ Gallery item deleted");
   }
 };

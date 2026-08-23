@@ -217,21 +217,27 @@ export default function AdminDashboard({
     }
   };
 
-  const handleDeleteDish = async (id: string | number, name: string) => {
-    if (window.confirm(`WARNING: You are about to PERMANENTLY delete and purge "${name}" from the database.\n\nThis action is completely IRREVERSIBLE and cannot be undone.\n\n-> If you just want to take this item off the public website temporarily, click CANCEL and use "Soft Delete", "Hide", or "Disable" instead.\n\nAre you absolutely sure you want to PERMANENTLY purge this item?`)) {
-      setIsSaving(true);
-      try {
-        await MenuService.deleteDish(id);
-        onUpdateDishes(dishes.filter(d => d.id !== id));
-        showToast(`Permanently deleted and purged "${name}".`, 'info');
-      } catch (err) {
-        console.error('Failed to delete dish:', err);
-        showToast(err instanceof Error ? err.message : `Failed to delete "${name}".`, 'error');
-      } finally {
-        setIsSaving(false);
-      }
+  const handleDeleteDish = async (id: number, name: string) => {
+  if (window.confirm(`WARNING: You are about to PERMANENTLY delete and purge "${name}" from the database.\n\nThis action is completely IRREVERSIBLE and cannot be undone.\n\nAre you absolutely sure you want to PERMANENTLY purge this item?`)) {
+    setIsSaving(true);
+    try {
+      console.log("🔴 AdminDashboard: Deleting dish", id, name);
+      await MenuService.deleteDish(id);
+      
+      // Force re-fetch from database instead of just filtering local state
+      const freshDishes = await MenuService.getDishes();
+      onUpdateDishes(freshDishes);
+      
+      showToast(`Permanently deleted and purged "${name}".`, 'info');
+      console.log("✅ Dish deleted and UI refreshed from DB");
+    } catch (err) {
+      console.error('❌ Failed to delete dish:', err);
+      showToast(err instanceof Error ? err.message : `Failed to delete "${name}".`, 'error');
+    } finally {
+      setIsSaving(false);
     }
-  };
+  }
+};
 
   const handleAddIngredient = () => {
     if (ingredientInput.trim()) {
