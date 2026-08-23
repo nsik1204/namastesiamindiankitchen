@@ -1,818 +1,1543 @@
-/**
- * src/App.tsx — Namaste Siam Indian Kitchen
- * ---------------------------------------------------------------------------
- * Single composition root.
- *
- *  - Supabase is the ONLY persistent source. No localStorage cache, no static
- *    seed fallback, no auto-seeding. If a read fails we surface an error state
- *    instead of silently restoring deleted rows.
- *  - No admin affordance of any kind is rendered on public pages.
- *  - The admin surface is reachable only at /unlock-admin?k=<secret>. The key
- *    is read from import.meta.env.VITE_ADMIN_UNLOCK_KEY (never hardcoded) and
- *    is ONLY an obscurity gate: it hides the login form from crawlers and
- *    casual visitors. It is NOT authentication and NOT device binding — the
- *    real gate is Supabase email+password auth plus an `admin` role checked
- *    server-side by RLS. A URL key cannot bind access to one device; anyone
- *    holding the link sees the same login form and still needs credentials.
- *  - All ordering features (cart, checkout, delivery/pickup, prices-as-buy)
- *    are removed. The menu is presentational only.
- *  - Visual language adopted from the supplied workspace UI (warm paper theme:
- *    ink/amber tokens, Fraunces display, reveal-on-scroll sections).
- * ---------------------------------------------------------------------------
- */
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { MenuService } from './services/menuService';
+import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from './types';
+import DishCard from './components/DishCard';
+import AdminDashboard from './components/admin/AdminDashboard';
+import { getSupabaseClient } from './services/supabaseClient';
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-
-/* ========================================================================== */
-/* Supabase client (single instance, no fallback data path)                    */
-/* ========================================================================== */
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as
-  | string
-  | undefined;
-
-/** Unlock key comes from env only — never commit a real value. */
-const UNLOCK_KEY = (import.meta.env.VITE_ADMIN_UNLOCK_KEY as string | undefined) ?? "";
-
-let _client: SupabaseClient | null = null;
-function supa(): SupabaseClient {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error(
-      "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
-    );
-  }
-  if (!_client) {
-    _client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: false,
-        storageKey: "nsik-auth",
-      },
-    });
-  }
-  return _client;
-}
-
-/* ========================================================================== */
-/* Types                                                                       */
-/* ========================================================================== */
-
-export interface Dish {
-  id: number;
-  slug: string;
-  name: string;
-  description: string;
-  priceTHB: number;
-  category: string;
-  veg: boolean;
-  spiceLevel: string;
-  ingredients: string[];
-  chefSpecial: boolean;
-  bestseller: boolean;
-  customerFavorite: boolean;
-  todaySpecial: boolean;
-  image: string;
-  active: boolean;
-  displayOrder: number;
-}
-
-export interface Category {
-  id: string;
-  slug: string;
-  name: string;
-  displayOrder: number;
-  active: boolean;
-}
-
-export interface RestaurantInfo {
-  name: string;
-  address: string;
-  phone: string;
-  openingHours: string;
-  instagram: string;
-  website: string;
-  diningStyle: string;
-}
-
-export interface AboutInfo {
-  story: string[];
-  highlights: string[];
-}
-
-export interface GalleryItem {
-  id: number;
-  image: string;
-  alt: string;
-  tall: boolean;
-  displayOrder: number;
-  active: boolean;
-}
-
-type LoadState = "loading" | "ready" | "error";
-
-/* ========================================================================== */
-/* Row mappers — pure, no defaults invented from local seed data               */
-/* ========================================================================== */
-
-const mapDish = (r: any): Dish => ({
-  id: Number(r.id),
-  slug: r.slug ?? "",
-  name: r.name ?? "",
-  description: r.description ?? "",
-  priceTHB: Number(r.price_thb ?? 0),
-  category: r.category_id ?? "",
-  veg: r.veg !== false && r.food_type !== "nonveg",
-  spiceLevel: r.spice_level ?? "",
-  ingredients: Array.isArray(r.ingredients) ? r.ingredients : [],
-  chefSpecial: !!r.chef_special,
-  bestseller: !!(r.bestseller ?? r.popular),
-  customerFavorite: !!r.customer_favorite,
-  todaySpecial: !!r.today_special,
-  image: r.image_url ?? "",
-  active: r.active !== false,
-  displayOrder: Number(r.display_order ?? 0),
-});
-
-const mapCategory = (r: any): Category => ({
-  id: String(r.id),
-  slug: r.slug ?? String(r.id),
-  name: r.name ?? r.label ?? String(r.id),
-  displayOrder: Number(r.display_order ?? r.sort_order ?? 0),
-  active: r.active !== false,
-});
-
-const mapGallery = (r: any): GalleryItem => ({
-  id: Number(r.id),
-  image: r.image_url ?? "",
-  alt: r.alt_text ?? r.title ?? "",
-  tall: !!r.is_tall,
-  displayOrder: Number(r.display_order ?? r.sort_order ?? 0),
-  active: r.active !== false,
-});
-
-/* ========================================================================== */
-/* Data layer — reads Supabase and nothing else                                */
-/* ========================================================================== */
-
-async function loadSiteData() {
-  const db = supa();
-
-  const [dishesRes, catsRes, infoRes, aboutRes, galleryRes] = await Promise.all([
-    db.from("foods").select("*").eq("active", true).order("display_order", { ascending: true }),
-    db.from("categories").select("*").eq("active", true).order("display_order", { ascending: true }),
-    db.from("restaurant_info").select("*").limit(1).maybeSingle(),
-    db.from("about_info").select("*").limit(1).maybeSingle(),
-    db.from("gallery").select("*").eq("active", true).order("display_order", { ascending: true }),
-  ]);
-
-  const firstError =
-    dishesRes.error || catsRes.error || infoRes.error || aboutRes.error || galleryRes.error;
-  if (firstError) throw firstError;
-
-  const info = infoRes.data;
-  const about = aboutRes.data;
-
-  return {
-    dishes: (dishesRes.data ?? []).map(mapDish),
-    categories: (catsRes.data ?? []).map(mapCategory),
-    restaurantInfo: info
-      ? ({
-          name: info.name ?? "",
-          address: info.address ?? "",
-          phone: info.phone ?? "",
-          openingHours: info.opening_hours ?? "",
-          instagram: info.instagram ?? "",
-          website: info.website ?? "",
-          diningStyle: info.dining_style ?? "",
-        } as RestaurantInfo)
-      : null,
-    aboutInfo: about
-      ? ({
-          story: about.story_paragraphs ?? [],
-          highlights: about.highlights ?? [],
-        } as AboutInfo)
-      : null,
-    gallery: (galleryRes.data ?? []).map(mapGallery),
-  };
-}
-
-/** Admin write helpers. Authorisation is enforced by RLS, not by this code. */
-const AdminData = {
-  async listAllDishes(): Promise<Dish[]> {
-    const { data, error } = await supa()
-      .from("foods")
-      .select("*")
-      .order("display_order", { ascending: true });
-    if (error) throw error;
-    return (data ?? []).map(mapDish);
-  },
-
-  /** Hard delete — the row is gone from the single source of truth. */
-  async deleteDish(id: number): Promise<void> {
-    const { error } = await supa().from("foods").delete().eq("id", id);
-    if (error) throw error;
-  },
-
-  async setDishActive(id: number, active: boolean): Promise<void> {
-    const { error } = await supa()
-      .from("foods")
-      .update({ active, is_available: active, updated_at: new Date().toISOString() })
-      .eq("id", id);
-    if (error) throw error;
-  },
-
-  async upsertDish(d: Partial<Dish> & { name: string; category: string }): Promise<void> {
-    const row: Record<string, unknown> = {
-      slug: d.slug || slugify(d.name),
-      name: d.name,
-      description: d.description ?? "",
-      price_thb: d.priceTHB ?? 0,
-      category_id: d.category,
-      veg: d.veg !== false,
-      food_type: d.veg === false ? "nonveg" : "veg",
-      spice_level: d.spiceLevel ?? "",
-      ingredients: d.ingredients ?? [],
-      chef_special: !!d.chefSpecial,
-      bestseller: !!d.bestseller,
-      popular: !!d.bestseller,
-      customer_favorite: !!d.customerFavorite,
-      today_special: !!d.todaySpecial,
-      image_url: d.image ?? "",
-      active: d.active !== false,
-      is_available: d.active !== false,
-      display_order: d.displayOrder ?? 0,
-      updated_at: new Date().toISOString(),
-    };
-    if (d.id && d.id > 0) row.id = d.id;
-    const { error } = await supa().from("foods").upsert(row, { onConflict: "id" });
-    if (error) throw error;
-  },
+/* ------------------------------------------------------------------ */
+/* Warm-paper / tandoor palette (from workspace UI reference)          */
+/* ------------------------------------------------------------------ */
+const T = {
+  milk: '#FDF8F1',
+  paper: '#FFFDF9',
+  wine: '#7A4A22',
+  wineDeep: '#3D1F00',
+  amber: '#E08A2B',
+  ink: '#2B1A0E',
+  muted: '#8C7358',
+  line: 'rgba(122,74,34,0.16)',
 };
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_]+/g, "-")
-    .replace(/-+/g, "-");
+const UNLOCK_PATH = '/unlock-admin';
+
+/* ================================================================== */
+/* Ambient ember background                                            */
+/* ================================================================== */
+function Background() {
+  const embers = useMemo(
+    () =>
+      Array.from({ length: 14 }, (_, i) => ({
+        id: i,
+        left: `${(i * 7.3 + 4) % 100}%`,
+        size: 2 + ((i * 13) % 4),
+        duration: 9 + ((i * 17) % 9),
+        delay: -((i * 23) % 12),
+        dx: (i % 2 === 0 ? 1 : -1) * (18 + ((i * 11) % 46)),
+      })),
+    []
+  );
+
+  return (
+    <>
+      <style>{`
+        @keyframes nsEmberRise {
+          0%   { transform: translate3d(0, 12vh, 0) scale(0.7); opacity: 0; }
+          12%  { opacity: 0.75; }
+          100% { transform: translate3d(var(--ns-dx, 0px), -102vh, 0) scale(1.15); opacity: 0; }
+        }
+        .ns-ember {
+          position: absolute;
+          bottom: -10px;
+          border-radius: 9999px;
+          background: radial-gradient(circle, ${T.amber} 0%, rgba(224,138,43,0) 70%);
+          animation-name: nsEmberRise;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+        }
+        @media (prefers-reduced-motion: reduce) { .ns-ember { animation: none; opacity: 0; } }
+      `}</style>
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: 'none',
+          background:
+            `radial-gradient(1100px 520px at 12% -8%, rgba(224,138,43,0.18), transparent 60%),` +
+            `radial-gradient(900px 460px at 92% 4%, rgba(122,74,34,0.16), transparent 62%),` +
+            `linear-gradient(180deg, ${T.milk} 0%, ${T.paper} 55%, ${T.milk} 100%)`,
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}
+      >
+        {embers.map((e) => (
+          <span
+            key={e.id}
+            className="ns-ember"
+            style={
+              {
+                left: e.left,
+                width: e.size,
+                height: e.size,
+                animationDuration: `${e.duration}s`,
+                animationDelay: `${e.delay}s`,
+                ['--ns-dx' as string]: `${e.dx}px`,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </div>
+    </>
+  );
 }
 
-const thb = (n: number) => `฿${n.toLocaleString("en-US")}`;
-
-/* ========================================================================== */
-/* Routing — minimal, hash-free, reactive to history API                       */
-/* ========================================================================== */
-
-function useLocation() {
-  const [loc, setLoc] = useState(() => ({
-    path: window.location.pathname,
-    search: window.location.search,
-  }));
-
-  useEffect(() => {
-    const sync = () =>
-      setLoc({ path: window.location.pathname, search: window.location.search });
-    const push = window.history.pushState;
-    const replace = window.history.replaceState;
-    window.history.pushState = function (...a: any) {
-      push.apply(this, a as any);
-      sync();
-    };
-    window.history.replaceState = function (...a: any) {
-      replace.apply(this, a as any);
-      sync();
-    };
-    window.addEventListener("popstate", sync);
-    return () => {
-      window.history.pushState = push;
-      window.history.replaceState = replace;
-      window.removeEventListener("popstate", sync);
-    };
-  }, []);
-
-  return loc;
+/* ================================================================== */
+/* Protected admin gate — only reachable at /unlock-admin?k=<key>      */
+/* ================================================================== */
+interface AdminGateProps {
+  dishes: Dish[];
+  categories: Category[];
+  restaurantInfo: RestaurantInfo;
+  aboutInfo: AboutInfo;
+  gallery: GalleryItem[];
+  onUpdateDishes: (d: Dish[]) => void;
+  onUpdateCategories: (c: Category[]) => void;
+  onUpdateRestaurantInfo: (r: RestaurantInfo) => void;
+  onUpdateAboutInfo: (a: AboutInfo) => void;
+  onUpdateGallery: (g: GalleryItem[]) => void;
+  onExit: () => void;
 }
 
-/** Constant-time-ish comparison so the key isn't trivially timing-probed. */
-function keyMatches(provided: string): boolean {
-  if (!UNLOCK_KEY || !provided) return false;
-  if (provided.length !== UNLOCK_KEY.length) return false;
-  let diff = 0;
-  for (let i = 0; i < UNLOCK_KEY.length; i++) {
-    diff |= UNLOCK_KEY.charCodeAt(i) ^ provided.charCodeAt(i);
-  }
-  return diff === 0;
-}
+function AdminGate(props: AdminGateProps) {
+  const supabase = getSupabaseClient();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-/* ========================================================================== */
-/* Auth — Supabase session + server-verified admin role                        */
-/* ========================================================================== */
-
-interface AdminSession {
-  status: "checking" | "anon" | "admin" | "denied";
-  email: string | null;
-}
-
-function useAdminSession(enabled: boolean) {
-  const [session, setSession] = useState<AdminSession>({
-    status: enabled ? "checking" : "anon",
-    email: null,
-  });
-
-  const evaluate = useCallback(async () => {
-    if (!enabled) return;
-    try {
-      const db = supa();
-      const {
-        data: { session: s },
-      } = await db.auth.getSession();
-      if (!s?.user) {
-        setSession({ status: "anon", email: null });
-        return;
-      }
-      // Role lives in a dedicated table and is verified through a
-      // SECURITY DEFINER function — never in localStorage or the JWT payload.
-      const { data, error } = await db.rpc("is_admin");
-      if (error || data !== true) {
-        setSession({ status: "denied", email: s.user.email ?? null });
-        return;
-      }
-      setSession({ status: "admin", email: s.user.email ?? null });
-    } catch {
-      setSession({ status: "denied", email: null });
+  const verifyAdmin = useCallback(async (): Promise<boolean> => {
+    if (!supabase) {
+      setError('Backend is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+      return false;
     }
-  }, [enabled]);
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !userData?.user) return false;
+    const { data, error: rpcErr } = await supabase.rpc('is_admin');
+    if (rpcErr) {
+      setError(`Admin verification failed: ${rpcErr.message}`);
+      return false;
+    }
+    if (data !== true) {
+      setError('This account is signed in but is not an administrator.');
+      return false;
+    }
+    return true;
+  }, [supabase]);
 
+  // Restore an existing admin session on mount.
   useEffect(() => {
-    if (!enabled) return;
-    void evaluate();
-    const {
-      data: { subscription },
-    } = supa().auth.onAuthStateChange(() => void evaluate());
-    return () => subscription.unsubscribe();
-  }, [enabled, evaluate]);
+    let active = true;
+    (async () => {
+      const ok = await verifyAdmin();
+      if (active) {
+        setIsAdmin(ok);
+        setChecking(false);
+        if (ok) setError(null);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [verifyAdmin]);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supa().auth.signInWithPassword({ email, password });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true as const };
-  }, []);
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!supabase) {
+      setError('Backend is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (signInErr) {
+        setError(signInErr.message);
+        return;
+      }
+      const ok = await verifyAdmin();
+      if (!ok) {
+        await supabase.auth.signOut();
+        setIsAdmin(false);
+        setError((prev) => prev ?? 'Access denied for this account.');
+        return;
+      }
+      setPassword('');
+      setIsAdmin(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unexpected sign-in error.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
-  const signOut = useCallback(async () => {
-    await supa().auth.signOut();
-    setSession({ status: "anon", email: null });
-  }, []);
+  const handleSignOut = async () => {
+    if (supabase) await supabase.auth.signOut();
+    setIsAdmin(false);
+  };
 
-  return { session, signIn, signOut, refresh: evaluate };
-}
-
-/* ========================================================================== */
-/* Presentational primitives (workspace UI language)                           */
-/* ========================================================================== */
-
-function Reveal({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [shown, setShown] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([e]) => e.isIntersecting && (setShown(true), io.disconnect()),
-      { threshold: 0.12 }
+  if (checking) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: T.milk,
+          color: T.wine,
+          position: 'relative',
+          zIndex: 10,
+        }}
+      >
+        <p style={{ fontSize: 14, opacity: 0.8 }}>Checking administrator session…</p>
+      </div>
     );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+  }
+
+  if (isAdmin) {
+    return (
+      <div style={{ position: 'relative', zIndex: 10, minHeight: '100vh', background: T.milk }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: 10,
+            padding: '12px 18px',
+            borderBottom: `1px solid ${T.line}`,
+            background: T.paper,
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleSignOut}
+            style={{
+              border: `1px solid ${T.line}`,
+              background: 'transparent',
+              color: T.wine,
+              borderRadius: 10,
+              padding: '7px 14px',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Sign out
+          </button>
+        </div>
+        <AdminDashboard
+          dishes={props.dishes}
+          categories={props.categories}
+          restaurantInfo={props.restaurantInfo}
+          aboutInfo={props.aboutInfo}
+          gallery={props.gallery}
+          onUpdateDishes={props.onUpdateDishes}
+          onUpdateRestaurantInfo={props.onUpdateRestaurantInfo}
+          onUpdateAboutInfo={props.onUpdateAboutInfo}
+          onUpdateCategories={props.onUpdateCategories}
+          onUpdateGallery={props.onUpdateGallery}
+          onClose={props.onExit}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
-      ref={ref}
-      style={{ transitionDelay: `${delay}ms` }}
-      className={`transition-all duration-700 ease-out ${
-        shown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-      }`}
+      style={{
+        position: 'relative',
+        zIndex: 10,
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+      }}
     >
-      {children}
+      <form
+        onSubmit={handleSignIn}
+        style={{
+          width: '100%',
+          maxWidth: 400,
+          background: T.paper,
+          border: `1px solid ${T.line}`,
+          borderRadius: 22,
+          padding: 28,
+          boxShadow: '0 22px 60px rgba(61,31,0,0.12)',
+        }}
+      >
+        <p
+          style={{
+            fontSize: 10,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            color: T.amber,
+            fontWeight: 800,
+            margin: 0,
+          }}
+        >
+          Restricted Area
+        </p>
+        <h1 style={{ margin: '8px 0 4px', fontSize: 24, color: T.ink, fontWeight: 800 }}>
+          Administrator sign in
+        </h1>
+        <p style={{ margin: '0 0 20px', fontSize: 12, color: T.muted, lineHeight: 1.6 }}>
+          Authorised staff only. All changes are written to the live menu database.
+        </p>
+
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: T.wine }}>
+          Email
+          <input
+            type="email"
+            required
+            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{
+              width: '100%',
+              marginTop: 6,
+              marginBottom: 14,
+              padding: '11px 13px',
+              borderRadius: 12,
+              border: `1px solid ${T.line}`,
+              background: T.milk,
+              color: T.ink,
+              fontSize: 14,
+              boxSizing: 'border-box',
+            }}
+          />
+        </label>
+
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: T.wine }}>
+          Password
+          <input
+            type="password"
+            required
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{
+              width: '100%',
+              marginTop: 6,
+              marginBottom: 18,
+              padding: '11px 13px',
+              borderRadius: 12,
+              border: `1px solid ${T.line}`,
+              background: T.milk,
+              color: T.ink,
+              fontSize: 14,
+              boxSizing: 'border-box',
+            }}
+          />
+        </label>
+
+        {error && (
+          <p
+            role="alert"
+            style={{
+              margin: '0 0 14px',
+              fontSize: 12,
+              color: '#9B1C1C',
+              background: 'rgba(155,28,28,0.08)',
+              border: '1px solid rgba(155,28,28,0.2)',
+              borderRadius: 10,
+              padding: '9px 11px',
+            }}
+          >
+            {error}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={busy}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            borderRadius: 12,
+            border: 'none',
+            background: busy ? T.muted : T.wine,
+            color: T.milk,
+            fontWeight: 800,
+            fontSize: 14,
+            cursor: busy ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {busy ? 'Signing in…' : 'Sign in'}
+        </button>
+
+        <button
+          type="button"
+          onClick={props.onExit}
+          style={{
+            width: '100%',
+            marginTop: 10,
+            padding: '10px 16px',
+            borderRadius: 12,
+            border: `1px solid ${T.line}`,
+            background: 'transparent',
+            color: T.wine,
+            fontWeight: 700,
+            fontSize: 12,
+            cursor: 'pointer',
+          }}
+        >
+          Back to site
+        </button>
+      </form>
     </div>
   );
 }
 
-function Chip({ children }: { children: ReactNode }) {
+/* ================================================================== */
+/* Not found                                                           */
+/* ================================================================== */
+function NotFound({ onHome }: { onHome: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-line bg-ink2 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-sand">
-      {children}
-    </span>
+    <div
+      style={{
+        position: 'relative',
+        zIndex: 10,
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        color: T.ink,
+        textAlign: 'center',
+        padding: 24,
+      }}
+    >
+      <h1 style={{ fontSize: 38, fontWeight: 800, margin: 0 }}>Page not found</h1>
+      <p style={{ color: T.muted, margin: 0 }}>The page you requested does not exist.</p>
+      <button
+        type="button"
+        onClick={onHome}
+        style={{
+          marginTop: 8,
+          padding: '11px 20px',
+          borderRadius: 999,
+          border: 'none',
+          background: T.wine,
+          color: T.milk,
+          fontWeight: 700,
+          cursor: 'pointer',
+        }}
+      >
+        Back to menu
+      </button>
+    </div>
   );
 }
 
-/* ========================================================================== */
-/* Public site                                                                 */
-/* ========================================================================== */
-
-function PublicSite() {
-  const [state, setState] = useState<LoadState>("loading");
-  const [errorMsg, setErrorMsg] = useState<string>("");
-  const [dishes, setDishes] = useState<Dish[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [info, setInfo] = useState<RestaurantInfo | null>(null);
-  const [about, setAbout] = useState<AboutInfo | null>(null);
-  const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  const [activeCat, setActiveCat] = useState<string>("all");
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Dish | null>(null);
-
-  const load = useCallback(async () => {
-    setState("loading");
-    try {
-      const data = await loadSiteData();
-      setDishes(data.dishes);
-      setCategories(data.categories);
-      setInfo(data.restaurantInfo);
-      setAbout(data.aboutInfo);
-      setGallery(data.gallery);
-      setState("ready");
-    } catch (e: any) {
-      setErrorMsg(e?.message ?? "Unable to reach the kitchen database.");
-      setState("error");
-    }
-  }, []);
+/* ================================================================== */
+/* App                                                                 */
+/* ================================================================== */
+export default function App() {
+  const [currentPath, setCurrentPath] = useState<string>(window.location.pathname);
+  const [currentSearch, setCurrentSearch] = useState<string>(window.location.search);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+      setCurrentSearch(window.location.search);
+    };
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
 
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return dishes
-      .filter((d) => (activeCat === "all" ? true : d.category === activeCat))
-      .filter(
-        (d) =>
-          !q ||
-          d.name.toLowerCase().includes(q) ||
-          d.description.toLowerCase().includes(q) ||
-          d.ingredients.some((i) => i.toLowerCase().includes(q))
-      )
-      .sort((a, b) => a.displayOrder - b.displayOrder);
-  }, [dishes, activeCat, query]);
+    window.history.pushState = function (...args) {
+      originalPushState.apply(this, args as never);
+      handleLocationChange();
+    };
+    window.history.replaceState = function (...args) {
+      originalReplaceState.apply(this, args as never);
+      handleLocationChange();
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    return () => {
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+      window.removeEventListener('popstate', handleLocationChange);
+    };
+  }, []);
 
-  const todaySpecial = useMemo(
-    () => visible.find((d) => d.todaySpecial) ?? null,
-    [visible]
+  /* ----------------------------- data ----------------------------- */
+  const [dishes, setDishes] = useState<Dish[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [restaurantInfo, setRestaurantInfo] = useState<RestaurantInfo | null>(null);
+  const [aboutInfo, setAboutInfo] = useState<AboutInfo | null>(null);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const [info, about, cats, allDishes, items] = await Promise.all([
+          MenuService.getRestaurantInfo(),
+          MenuService.getAboutInfo(),
+          MenuService.getCategories(),
+          MenuService.getDishes(),
+          MenuService.getGalleryItems(),
+        ]);
+        if (!active) return;
+        setRestaurantInfo(info);
+        setAboutInfo(about);
+        setCategories(cats);
+        setDishes(allDishes);
+        setGallery(items);
+        setLoadError(null);
+      } catch (err) {
+        if (!active) return;
+        setLoadError(err instanceof Error ? err.message : 'Failed to load menu data.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  /* ------------------------- realtime sync ------------------------ */
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel('nsik-public-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'foods' }, async () => {
+        try {
+          setDishes(await MenuService.getDishes());
+        } catch (err) {
+          console.error(err);
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, async () => {
+        try {
+          setCategories(await MenuService.getCategories());
+        } catch (err) {
+          console.error(err);
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, async () => {
+        try {
+          setGallery(await MenuService.getGalleryItems());
+        } catch (err) {
+          console.error(err);
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurant_info' }, async () => {
+        try {
+          setRestaurantInfo(await MenuService.getRestaurantInfo());
+        } catch (err) {
+          console.error(err);
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'about_info' }, async () => {
+        try {
+          setAboutInfo(await MenuService.getAboutInfo());
+        } catch (err) {
+          console.error(err);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  /* ------------------------------ UI ------------------------------ */
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
+  const [selectedInfoType, setSelectedInfoType] =
+    useState<'about' | 'contact' | 'privacy' | 'terms' | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedDish(null);
+        setSelectedInfoType(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const activeDishes = useMemo(() => dishes.filter((d) => d.active !== false), [dishes]);
+
+  const matchesQuery = useCallback(
+    (d: Dish) => {
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return true;
+      const ing = Array.isArray(d.ingredients) ? d.ingredients.join(' ') : '';
+      return `${d.name} ${d.description} ${d.category} ${ing}`.toLowerCase().includes(q);
+    },
+    [searchQuery]
   );
 
-  if (state === "loading") {
+  const inCategory = useCallback(
+    (d: Dish) => activeCategory === 'all' || d.category === activeCategory,
+    [activeCategory]
+  );
+
+  const todaysSpecial = useMemo(() => {
+    const specials = activeDishes.filter((d) => d.todaySpecial);
+    if (!specials.length) return null;
+    return [...specials].sort(
+      (a, b) => (a.display_order_today || 0) - (b.display_order_today || 0)
+    )[0];
+  }, [activeDishes]);
+
+  const chefRecommendations = useMemo(
+    () =>
+      activeDishes
+        .filter((d) => d.chefSpecial)
+        .sort((a, b) => (a.display_order_chef || 0) - (b.display_order_chef || 0)),
+    [activeDishes]
+  );
+
+  const menuDishes = useMemo(
+    () =>
+      activeDishes
+        .filter((d) => inCategory(d) && matchesQuery(d))
+        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0)),
+    [activeDishes, inCategory, matchesQuery]
+  );
+
+  const popularDishes = useMemo(
+    () =>
+      activeDishes
+        .filter((d) => d.bestseller && inCategory(d) && matchesQuery(d))
+        .sort((a, b) => (a.display_order_popular || 0) - (b.display_order_popular || 0)),
+    [activeDishes, inCategory, matchesQuery]
+  );
+
+  const favoriteDishes = useMemo(
+    () =>
+      activeDishes
+        .filter((d) => d.customerFavorite && inCategory(d) && matchesQuery(d))
+        .sort((a, b) => (a.display_order_favorite || 0) - (b.display_order_favorite || 0)),
+    [activeDishes, inCategory, matchesQuery]
+  );
+
+  const sortedCategories = useMemo(
+    () =>
+      [...categories]
+        .filter((c) => c.active !== false)
+        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0)),
+    [categories]
+  );
+
+  const sortedGallery = useMemo(
+    () =>
+      [...gallery]
+        .filter((g) => g.active !== false)
+        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0)),
+    [gallery]
+  );
+
+  const handleLiveSearchClick = () => {
+    if (searchInputRef.current) {
+      setSearchQuery(searchInputRef.current.value);
+      searchInputRef.current.focus();
+    }
+    document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  /* --------------------------- persistence ------------------------ */
+  const handleUpdateDishes = async (updated: Dish[]) => {
+    setDishes(updated);
+    await MenuService.saveDishes(updated);
+  };
+  const handleUpdateRestaurantInfo = async (updated: RestaurantInfo) => {
+    setRestaurantInfo(updated);
+    await MenuService.saveRestaurantInfo(updated);
+  };
+  const handleUpdateAboutInfo = async (updated: AboutInfo) => {
+    setAboutInfo(updated);
+    await MenuService.saveAboutInfo(updated);
+  };
+  const handleUpdateCategories = async (updated: Category[]) => {
+    setCategories(updated);
+    await MenuService.saveCategories(updated);
+  };
+  const handleUpdateGallery = async (updated: GalleryItem[]) => {
+    setGallery(updated);
+    await MenuService.saveGalleryItems(updated);
+  };
+
+  const goHome = useCallback(() => {
+    window.history.pushState({}, '', '/');
+  }, []);
+
+  /* ---------------------------- routing --------------------------- */
+  const normalizedPath = currentPath.replace(/\/+$/, '') || '/';
+  const isUnlockPath = normalizedPath === UNLOCK_PATH;
+  const unlockKeyParam = new URLSearchParams(currentSearch).get('k') || '';
+  const expectedKey = (import.meta.env.VITE_ADMIN_UNLOCK_KEY as string | undefined) || '';
+  const unlockGranted = isUnlockPath && expectedKey.length > 0 && unlockKeyParam === expectedKey;
+
+  if (isUnlockPath && !unlockGranted) {
     return (
-      <div className="min-h-screen grid place-items-center bg-ink text-sand">
-        <div className="flex flex-col items-center gap-3">
-          <span className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-amber" />
-          <p className="text-sm">Warming the tandoor…</p>
-        </div>
-      </div>
+      <>
+        <Background />
+        <NotFound onHome={goHome} />
+      </>
     );
   }
 
-  if (state === "error") {
+  if (loading) {
     return (
-      <div className="min-h-screen grid place-items-center bg-ink px-6 text-center">
-        <div className="max-w-md">
-          <h1 className="font-display text-3xl text-cream">Menu unavailable</h1>
-          <p className="mt-3 text-sm text-sand">
-            We could not load the live menu. Nothing is served from a local copy,
-            so what you see is always what the kitchen published.
-          </p>
-          <p className="mt-2 text-xs text-husk">{errorMsg}</p>
-          <button
-            onClick={() => void load()}
-            className="mt-6 rounded-full bg-amber px-6 h-11 text-sm font-semibold text-ink hover:bg-amberhi transition-colors"
-          >
-            Try again
-          </button>
+      <>
+        <Background />
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 10,
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            color: T.wine,
+          }}
+        >
+          <div>
+            <p style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Namaste Siam Indian Kitchen</p>
+            <p style={{ fontSize: 13, opacity: 0.75, marginTop: 6 }}>Loading menu…</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-ink text-cream">
-      {/* NOTE: no admin button, no admin link, no lock icon anywhere here. */}
-      <header className="sticky top-0 z-40 border-b border-line/70 bg-ink/90 backdrop-blur-md">
-        <div className="mx-auto flex h-[68px] max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <a href="#top" className="leading-none">
-            <span className="block font-display text-xl tracking-tight text-cream">
-              Namaste <span className="italic text-amber">Siam</span>
-            </span>
-            <span className="mt-1 hidden text-[11px] uppercase tracking-widest text-husk sm:block">
-              Indian Kitchen · Bangkok
-            </span>
-          </a>
-          <nav className="hidden items-center gap-7 text-sm text-sand md:flex">
-            <a href="#menu" className="transition-colors hover:text-amber">Menu</a>
-            <a href="#about" className="transition-colors hover:text-amber">About</a>
-            <a href="#gallery" className="transition-colors hover:text-amber">Gallery</a>
-            <a href="#contact" className="transition-colors hover:text-amber">Contact</a>
-          </nav>
-          {info?.phone && (
-            <a
-              href={`tel:${info.phone.replace(/\s/g, "")}`}
-              className="rounded-full bg-amber px-5 h-10 text-sm font-semibold text-ink leading-10 transition-colors hover:bg-amberhi"
-            >
-              Reserve a table
-            </a>
-          )}
-        </div>
-      </header>
-
-      {/* Hero */}
-      <section id="top" className="border-b border-line/60">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 pb-12 pt-14 sm:px-6 lg:grid-cols-12 lg:gap-8">
-          <div className="lg:col-span-7">
-            <Reveal>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber">
-                Authentic · wood-fired · {info?.diningStyle || "premium casual dining"}
-              </p>
-            </Reveal>
-            <Reveal delay={90}>
-              <h1 className="mt-5 font-display text-[2.7rem] leading-[1.02] tracking-[-0.02em] text-cream sm:text-6xl lg:text-[4.4rem]">
-                Experience
-                <br />
-                <em className="font-light italic text-amber">authentic</em> flavours.
-              </h1>
-            </Reveal>
-            <Reveal delay={170}>
-              <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-sand sm:text-base">
-                {about?.story?.[0] ??
-                  "Indian and Thai cooking from one kitchen in the heart of Bangkok — every curry slow-simmered, every naan pulled fresh from the tandoor."}
-              </p>
-            </Reveal>
-            <Reveal delay={250}>
-              <div className="mt-8 flex flex-wrap items-center gap-3.5">
-                <a
-                  href="#menu"
-                  className="inline-flex h-12 items-center rounded-full bg-amber px-6 text-sm font-semibold text-ink transition-all hover:bg-amberhi active:scale-95"
-                >
-                  Browse the menu
-                </a>
-                {info?.phone && (
-                  <a
-                    href={`tel:${info.phone.replace(/\s/g, "")}`}
-                    className="inline-flex h-12 items-center rounded-full border border-line px-6 text-sm text-sand transition-colors hover:border-amber/50 hover:text-amber"
-                  >
-                    Call {info.phone}
-                  </a>
-                )}
-              </div>
-            </Reveal>
-          </div>
-
-          {todaySpecial && (
-            <Reveal delay={200}>
-              <aside className="lg:col-span-5">
-                <div className="overflow-hidden rounded-3xl border border-line bg-coal shadow-sm">
-                  {todaySpecial.image && (
-                    <img
-                      src={todaySpecial.image}
-                      alt={todaySpecial.name}
-                      loading="lazy"
-                      className="h-56 w-full object-cover"
-                    />
-                  )}
-                  <div className="p-6">
-                    <Chip>Today&apos;s special</Chip>
-                    <h2 className="mt-3 font-display text-2xl text-cream">
-                      {todaySpecial.name}
-                    </h2>
-                    <p className="mt-2 line-clamp-3 text-sm text-sand">
-                      {todaySpecial.description}
-                    </p>
-                    <p className="mt-4 text-sm font-semibold text-amber">
-                      {thb(todaySpecial.priceTHB)}
-                    </p>
-                  </div>
-                </div>
-              </aside>
-            </Reveal>
-          )}
-        </div>
-      </section>
-
-      {/* Menu */}
-      <section id="menu" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <Reveal>
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber">
-                The menu
-              </p>
-              <h2 className="mt-2 font-display text-3xl text-cream sm:text-4xl">
-                Dishes from the fire
-              </h2>
-            </div>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search dishes or ingredients…"
-              aria-label="Search the menu"
-              className="h-11 w-full max-w-xs rounded-full border border-line bg-coal px-5 text-sm text-cream outline-none placeholder:text-husk focus:border-amber/60"
-            />
-          </div>
-        </Reveal>
-
-        <div className="mt-7 flex flex-wrap gap-2">
-          {[{ id: "all", name: "All" }, ...categories].map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setActiveCat(c.id)}
-              className={`h-9 rounded-full border px-4 text-sm transition-colors ${
-                activeCat === c.id
-                  ? "border-amber bg-amber text-ink font-semibold"
-                  : "border-line text-sand hover:border-amber/50 hover:text-amber"
-              }`}
-            >
-              {c.name}
-            </button>
-          ))}
-        </div>
-
-        {visible.length === 0 ? (
-          <p className="mt-12 text-center text-sm text-husk">
-            No dishes match that search.
-          </p>
+  if (unlockGranted) {
+    return (
+      <>
+        <Background />
+        {restaurantInfo && aboutInfo ? (
+          <AdminGate
+            dishes={dishes}
+            categories={categories}
+            restaurantInfo={restaurantInfo}
+            aboutInfo={aboutInfo}
+            gallery={gallery}
+            onUpdateDishes={handleUpdateDishes}
+            onUpdateCategories={handleUpdateCategories}
+            onUpdateRestaurantInfo={handleUpdateRestaurantInfo}
+            onUpdateAboutInfo={handleUpdateAboutInfo}
+            onUpdateGallery={handleUpdateGallery}
+            onExit={goHome}
+          />
         ) : (
-          <div className="mt-9 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {visible.map((d, i) => (
-              <Reveal key={d.id} delay={Math.min(i, 6) * 60}>
-                <article
-                  onClick={() => setSelected(d)}
-                  className="group h-full cursor-pointer overflow-hidden rounded-3xl border border-line bg-coal transition-shadow hover:shadow-[0_18px_50px_rgba(0,0,0,0.10)]"
-                >
-                  {d.image && (
-                    <img
-                      src={d.image}
-                      alt={d.name}
-                      loading="lazy"
-                      className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                    />
-                  )}
-                  <div className="p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-display text-lg leading-tight text-cream">
-                        {d.name}
-                      </h3>
-                      <span className="shrink-0 text-sm font-semibold text-amber">
-                        {thb(d.priceTHB)}
-                      </span>
-                    </div>
-                    <p className="mt-2 line-clamp-2 text-sm text-sand">{d.description}</p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Chip>{d.veg ? "Veg" : "Non-veg"}</Chip>
-                      {d.spiceLevel && <Chip>{d.spiceLevel}</Chip>}
-                      {d.chefSpecial && <Chip>Chef&apos;s pick</Chip>}
-                      {d.bestseller && <Chip>Popular</Chip>}
-                    </div>
-                  </div>
-                </article>
-              </Reveal>
-            ))}
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 10,
+              minHeight: '100vh',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 24,
+              textAlign: 'center',
+              color: T.ink,
+            }}
+          >
+            <div style={{ maxWidth: 460 }}>
+              <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>
+                Admin unavailable
+              </h1>
+              <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7 }}>
+                Restaurant configuration could not be loaded from the database, so the dashboard
+                cannot be opened.
+                {loadError ? ` Details: ${loadError}` : ''}
+              </p>
+            </div>
           </div>
         )}
-        <p className="mt-10 text-center text-xs text-husk">
-          Prices in Thai Baht. Dine-in and table reservations by phone — we do not
-          take online orders.
-        </p>
-      </section>
+      </>
+    );
+  }
 
-      {/* About */}
-      {about && (
-        <section id="about" className="border-y border-line/60 bg-ink2">
-          <div className="mx-auto max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid lg:grid-cols-12">
-            <div className="lg:col-span-7">
-              <Reveal>
-                <h2 className="font-display text-3xl text-cream sm:text-4xl">Our story</h2>
-              </Reveal>
-              {about.story.map((p, i) => (
-                <Reveal key={i} delay={80 + i * 70}>
-                  <p className="mt-4 text-[15px] leading-relaxed text-sand">{p}</p>
-                </Reveal>
+  if (normalizedPath !== '/' && normalizedPath !== '/index.html') {
+    return (
+      <>
+        <Background />
+        <NotFound onHome={goHome} />
+      </>
+    );
+  }
+
+  if (!restaurantInfo || !aboutInfo) {
+    return (
+      <>
+        <Background />
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 10,
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ maxWidth: 460 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: T.ink, margin: '0 0 8px' }}>
+              Menu temporarily unavailable
+            </h1>
+            <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7 }}>
+              We could not reach the kitchen database. Please refresh in a moment.
+              {loadError ? ` (${loadError})` : ''}
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  const sectionStyle: React.CSSProperties = {
+    maxWidth: 1180,
+    margin: '0 auto',
+    padding: '52px 20px 0',
+  };
+
+  const cardStyle: React.CSSProperties = {
+    background: T.paper,
+    border: `1px solid ${T.line}`,
+    borderRadius: 20,
+    padding: 18,
+    boxShadow: '0 14px 40px rgba(61,31,0,0.07)',
+  };
+
+  const SectionTitle = ({ lead, accent }: { lead: string; accent: string }) => (
+    <div style={{ marginBottom: 22 }}>
+      <span
+        style={{
+          fontSize: 10,
+          letterSpacing: '0.2em',
+          textTransform: 'uppercase',
+          color: T.amber,
+          fontWeight: 800,
+        }}
+      >
+        Namaste Siam
+      </span>
+      <h2 style={{ margin: '6px 0 0', fontSize: 30, fontWeight: 800, color: T.ink }}>
+        {lead} <span style={{ color: T.wine }}>{accent}</span>
+      </h2>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight: '100vh', position: 'relative', color: T.ink }}>
+      <Background />
+
+      <div style={{ position: 'relative', zIndex: 10 }}>
+        {/* HEADER */}
+        <header
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 40,
+            backdropFilter: 'blur(10px)',
+            background: 'rgba(253,248,241,0.86)',
+            borderBottom: `1px solid ${T.line}`,
+          }}
+        >
+          <nav
+            style={{
+              maxWidth: 1180,
+              margin: '0 auto',
+              padding: '14px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ fontWeight: 800, fontSize: 18, color: T.wine, letterSpacing: '-0.01em' }}>
+              Namaste Siam <span style={{ color: T.amber }}>Indian Kitchen</span>
+            </div>
+            <ul
+              style={{
+                display: 'flex',
+                gap: 20,
+                listStyle: 'none',
+                margin: 0,
+                padding: 0,
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              {[
+                ['#menu', 'Menu'],
+                ['#specials', 'Specials'],
+                ['#about', 'About'],
+                ['#info', 'Info'],
+                ['#gallery', 'Gallery'],
+              ].map(([href, label]) => (
+                <li key={href}>
+                  <a href={href} style={{ color: T.wine, textDecoration: 'none' }}>
+                    {label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </header>
+
+        {/* HERO */}
+        <section
+          id="top"
+          style={{
+            ...sectionStyle,
+            paddingTop: 56,
+            display: 'grid',
+            gridTemplateColumns: 'minmax(280px, 1.15fr) minmax(260px, 0.85fr)',
+            gap: 34,
+            alignItems: 'center',
+          }}
+        >
+          <div>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 11,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.14em',
+                color: T.wine,
+                background: 'rgba(224,138,43,0.12)',
+                border: `1px solid ${T.line}`,
+                borderRadius: 999,
+                padding: '7px 14px',
+              }}
+            >
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 999,
+                  background: T.amber,
+                  display: 'inline-block',
+                }}
+              />
+              Premium dining experience
+            </span>
+
+            <h1
+              style={{
+                fontSize: 'clamp(34px, 5vw, 54px)',
+                lineHeight: 1.05,
+                fontWeight: 800,
+                margin: '18px 0 12px',
+                color: T.ink,
+              }}
+            >
+              Experience <em style={{ color: T.wine }}>Authentic Flavours</em>
+            </h1>
+            <p style={{ fontSize: 15, color: T.muted, lineHeight: 1.75, maxWidth: 560, margin: 0 }}>
+              Crafted fresh. Served with passion. Browse our chef-curated menu of Indian and Thai
+              signatures, updated daily by our kitchen.
+            </p>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: 10,
+                marginTop: 24,
+                flexWrap: 'wrap',
+                maxWidth: 560,
+              }}
+            >
+              <input
+                type="text"
+                ref={searchInputRef}
+                placeholder="Search dishes, ingredients, category…"
+                aria-label="Search menu items"
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  flex: '1 1 240px',
+                  padding: '13px 16px',
+                  borderRadius: 999,
+                  border: `1px solid ${T.line}`,
+                  background: T.paper,
+                  color: T.ink,
+                  fontSize: 14,
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleLiveSearchClick}
+                style={{
+                  padding: '13px 22px',
+                  borderRadius: 999,
+                  border: 'none',
+                  background: T.wine,
+                  color: T.milk,
+                  fontWeight: 800,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                Live menu search
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 22 }}>
+              {[
+                '⭐ 4.8 Customer Rating',
+                '🍽️ 100+ Signature Dishes',
+                '🌿 Fresh Ingredients',
+                '🏆 Chef Recommended',
+              ].map((s) => (
+                <span
+                  key={s}
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: T.wine,
+                    background: T.paper,
+                    border: `1px solid ${T.line}`,
+                    borderRadius: 999,
+                    padding: '7px 13px',
+                  }}
+                >
+                  {s}
+                </span>
               ))}
             </div>
-            <div className="mt-10 lg:col-span-5 lg:mt-0">
-              <ul className="space-y-3">
-                {about.highlights.map((h, i) => (
-                  <Reveal key={i} delay={i * 70}>
-                    <li className="rounded-2xl border border-line bg-coal px-5 py-4 text-sm text-sand">
-                      {h}
-                    </li>
-                  </Reveal>
+          </div>
+
+          {todaysSpecial && (
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedDish(todaysSpecial)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') setSelectedDish(todaysSpecial);
+              }}
+              style={{ ...cardStyle, cursor: 'pointer', padding: 14 }}
+              aria-label={`Today's special: ${todaysSpecial.name}`}
+            >
+              <img
+                src={todaysSpecial.image}
+                alt={todaysSpecial.name}
+                loading="lazy"
+                style={{
+                  width: '100%',
+                  height: 230,
+                  objectFit: 'cover',
+                  borderRadius: 14,
+                  display: 'block',
+                }}
+              />
+              <div style={{ padding: '14px 6px 4px' }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: '0.16em',
+                    textTransform: 'uppercase',
+                    color: T.amber,
+                  }}
+                >
+                  Today&apos;s Special
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 800, marginTop: 6, color: T.ink }}>
+                  {todaysSpecial.name}
+                </div>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: T.muted,
+                    lineHeight: 1.6,
+                    margin: '6px 0 10px',
+                  }}
+                >
+                  {todaysSpecial.description}
+                </p>
+                <div style={{ fontSize: 18, fontWeight: 800, color: T.wine }}>
+                  ฿{todaysSpecial.priceTHB}
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* CHEF RECOMMENDATIONS */}
+        {chefRecommendations.length > 0 && (
+          <section id="specials" style={sectionStyle}>
+            <SectionTitle lead="Chef" accent="Recommendations" />
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gap: 18,
+              }}
+            >
+              {chefRecommendations.slice(0, 3).map((d) => (
+                <div
+                  key={`rec-${d.id}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedDish(d)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') setSelectedDish(d);
+                  }}
+                  style={{ ...cardStyle, cursor: 'pointer' }}
+                >
+                  <img
+                    src={d.image}
+                    alt={d.name}
+                    loading="lazy"
+                    style={{
+                      width: '100%',
+                      height: 170,
+                      objectFit: 'cover',
+                      borderRadius: 14,
+                      marginBottom: 12,
+                      display: 'block',
+                    }}
+                  />
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: T.ink }}>
+                    {d.name}
+                  </h3>
+                  <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, margin: '6px 0 0' }}>
+                    {d.description}
+                  </p>
+                  <p style={{ marginTop: 10, fontWeight: 800, color: T.wine }}>฿{d.priceTHB}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* CATEGORIES */}
+        <section id="menu" style={sectionStyle}>
+          <SectionTitle lead="Browse" accent="Menu Categories" />
+          <div
+            role="tablist"
+            aria-label="Menu categories"
+            style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}
+          >
+            {[{ id: 'all', label: 'All Dishes' }, ...sortedCategories.map((c) => ({ id: c.id, label: c.label || c.name }))].map(
+              (c) => {
+                const active = c.id === activeCategory;
+                return (
+                  <button
+                    key={`cat-${c.id}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setActiveCategory(c.id)}
+                    style={{
+                      padding: '9px 17px',
+                      borderRadius: 999,
+                      fontSize: 12.5,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      border: `1px solid ${active ? T.wine : T.line}`,
+                      background: active ? T.wine : T.paper,
+                      color: active ? T.milk : T.wine,
+                    }}
+                  >
+                    {c.label}
+                  </button>
+                );
+              }
+            )}
+          </div>
+        </section>
+
+        {/* FULL MENU */}
+        <section style={{ ...sectionStyle, paddingTop: 34 }}>
+          <SectionTitle lead="Our" accent="Menu" />
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+              gap: 18,
+            }}
+          >
+            {menuDishes.length > 0 ? (
+              menuDishes.map((d) => (
+                <DishCard
+                  key={`menu-dish-${d.id}`}
+                  dish={d}
+                  idPrefix="dish"
+                  onClick={() => setSelectedDish(d)}
+                />
+              ))
+            ) : (
+              <p style={{ color: T.muted, padding: '20px 0' }}>
+                No dishes match your search in this category.
+              </p>
+            )}
+          </div>
+        </section>
+
+        {/* POPULAR */}
+        {popularDishes.length > 0 && (
+          <section style={{ ...sectionStyle, paddingTop: 34 }}>
+            <SectionTitle lead="Popular" accent="Dishes" />
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                gap: 18,
+              }}
+            >
+              {popularDishes.map((d) => (
+                <DishCard
+                  key={`popular-dish-${d.id}`}
+                  dish={d}
+                  idPrefix="pop"
+                  onClick={() => setSelectedDish(d)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* CUSTOMER FAVOURITES */}
+        {favoriteDishes.length > 0 && (
+          <section style={{ ...sectionStyle, paddingTop: 34 }}>
+            <SectionTitle lead="Customer" accent="Favourites" />
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                gap: 18,
+              }}
+            >
+              {favoriteDishes.map((d) => (
+                <DishCard
+                  key={`fav-dish-${d.id}`}
+                  dish={d}
+                  idPrefix="fav"
+                  onClick={() => setSelectedDish(d)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ABOUT */}
+        <section id="about" style={sectionStyle}>
+          <SectionTitle lead="About" accent={restaurantInfo.name} />
+          <div
+            style={{
+              ...cardStyle,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: 24,
+              padding: 26,
+            }}
+          >
+            <div>
+              {aboutInfo.story.map((para, i) => (
+                <p
+                  key={`story-${i}`}
+                  style={{
+                    marginTop: i ? 12 : 0,
+                    marginBottom: 0,
+                    fontSize: 14,
+                    lineHeight: 1.8,
+                    color: T.muted,
+                  }}
+                >
+                  {para}
+                </p>
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignContent: 'flex-start' }}>
+              {aboutInfo.highlights.map((h, i) => (
+                <span
+                  key={`hl-${i}`}
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: T.wine,
+                    background: 'rgba(224,138,43,0.1)',
+                    border: `1px solid ${T.line}`,
+                    borderRadius: 999,
+                    padding: '8px 14px',
+                  }}
+                >
+                  {h}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* RESTAURANT INFO */}
+        <section id="info" style={sectionStyle}>
+          <SectionTitle lead="Restaurant" accent="Information" />
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: 18,
+            }}
+          >
+            {[
+              ['📍 Address', restaurantInfo.address],
+              ['📞 Phone', restaurantInfo.phone],
+              ['🕒 Opening Hours', restaurantInfo.openingHours],
+              ['📷 Instagram', restaurantInfo.instagram],
+              ['🌐 Website', restaurantInfo.website],
+              ['🍽️ Dining Style', restaurantInfo.diningStyle],
+            ].map(([title, value]) => (
+              <div key={title as string} style={cardStyle}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: T.wine }}>{title}</h3>
+                <p style={{ margin: '8px 0 0', fontSize: 13.5, color: T.muted, lineHeight: 1.7 }}>
+                  {value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* GALLERY */}
+        {sortedGallery.length > 0 && (
+          <section id="gallery" style={sectionStyle}>
+            <SectionTitle lead="Gallery" accent="& Ambience" />
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                gridAutoRows: '180px',
+                gap: 14,
+              }}
+            >
+              {sortedGallery.map((g, i) => (
+                <img
+                  key={`gal-${g.id ?? i}`}
+                  src={g.image}
+                  alt={g.alt || g.title || 'Restaurant ambience'}
+                  loading="lazy"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: 16,
+                    border: `1px solid ${T.line}`,
+                    gridRow: g.tall ? 'span 2' : 'span 1',
+                  }}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* FOOTER */}
+        <footer
+          style={{
+            marginTop: 64,
+            background: T.wineDeep,
+            color: 'rgba(255,248,240,0.86)',
+            padding: '46px 20px 22px',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 1180,
+              margin: '0 auto',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: 28,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: T.milk }}>
+                {restaurantInfo.name}
+              </div>
+              <p style={{ fontSize: 13, lineHeight: 1.75, marginTop: 10 }}>
+                Premium restaurant menu experience with authentic flavours, elegant ambience and
+                chef-crafted cuisine.
+              </p>
+            </div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: T.milk }}>Restaurant</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0 0', fontSize: 13 }}>
+                <li style={{ marginBottom: 8 }}>📍 {restaurantInfo.address}</li>
+                <li style={{ marginBottom: 8 }}>📞 {restaurantInfo.phone}</li>
+                <li>🕒 {restaurantInfo.openingHours}</li>
+              </ul>
+            </div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: T.milk }}>Links</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0 0', fontSize: 13 }}>
+                {(['about', 'contact', 'privacy', 'terms'] as const).map((t) => (
+                  <li key={t} style={{ marginBottom: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedInfoType(t)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        color: 'rgba(255,248,240,0.78)',
+                        cursor: 'pointer',
+                        fontSize: 13,
+                      }}
+                    >
+                      {t === 'about'
+                        ? 'About'
+                        : t === 'contact'
+                        ? 'Contact'
+                        : t === 'privacy'
+                        ? 'Privacy Policy'
+                        : 'Terms'}
+                    </button>
+                  </li>
                 ))}
               </ul>
             </div>
           </div>
-        </section>
-      )}
+          <div
+            style={{
+              maxWidth: 1180,
+              margin: '30px auto 0',
+              paddingTop: 16,
+              borderTop: '1px solid rgba(255,248,240,0.14)',
+              fontSize: 12,
+              opacity: 0.75,
+            }}
+          >
+            © {new Date().getFullYear()} {restaurantInfo.name}. All rights reserved.
+          </div>
+        </footer>
+      </div>
 
-      {/* Gallery */}
-      {gallery.length > 0 && (
-        <section id="gallery" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <Reveal>
-            <h2 className="font-display text-3xl text-cream sm:text-4xl">From the pass</h2>
-          </Reveal>
-          <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-            {gallery
-              .slice()
-              .sort((a, b) => a.displayOrder - b.displayOrder)
-              .map((g, i) => (
-                <Reveal key={g.id} delay={Math.min(i, 6) * 50}>
-                  <img
-                    src={g.image}
-                    alt={g.alt}
-                    loading="lazy"
-                    className={`w-full rounded-2xl border border-line object-cover ${
-                      g.tall ? "h-80" : "h-40"
-                    }`}
-                  />
-                </Reveal>
-              ))}
-          </div>
-        </section>
-      )}
-
-      {/* Contact / footer */}
-      <footer id="contact" className="border-t border-line/60 bg-ink2">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 md:grid-cols-3">
-          <div>
-            <p className="font-display text-xl text-cream">{info?.name ?? "Namaste Siam"}</p>
-            <p className="mt-3 text-sm text-sand">{info?.address}</p>
-          </div>
-          <div className="text-sm text-sand">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-husk">Hours</p>
-            <p className="mt-2 whitespace-pre-line">{info?.openingHours}</p>
-          </div>
-          <div className="text-sm text-sand">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-husk">Reach us</p>
-            {info?.phone && (
-              <p className="mt-2">
-                <a href={`tel:${info.phone.replace(/\s/g, "")}`} className="hover:text-amber">
-                  {info.phone}
-                </a>
-              </p>
-            )}
-            {info?.instagram && (
-              <p className="mt-1">
-                <a href={info.instagram} className="hover:text-amber" rel="noreferrer noopener">
-                  Instagram
-                </a>
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="border-t border-line/60 py-5 text-center text-xs text-husk">
-          © {new Date().getFullYear()} {info?.name ?? "Namaste Siam Indian Kitchen"}
-        </div>
-      </footer>
-
-      {/* Dish detail modal — informational only, no add-to-cart */}
-      {selected && (
+      {/* DISH MODAL */}
+      {selectedDish && (
         <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4"
           role="dialog"
           aria-modal="true"
-          onClick={() => setSelected(null)}
+          aria-label={selectedDish.name}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedDish(null);
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 90,
+            background: 'rgba(43,26,14,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 18,
+          }}
         >
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="max-h-[85vh] w-full max-w-lg overflow-auto rounded-3xl border border-line bg-coal"
+            style={{
+              background: T.paper,
+              borderRadius: 22,
+              maxWidth: 880,
+              width: '100%',
+              maxHeight: '88vh',
+              overflowY: 'auto',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              boxShadow: '0 28px 70px rgba(43,26,14,0.35)',
+            }}
           >
-            {selected.image && (
-              <img src={selected.image} alt={selected.name} className="h-56 w-full object-cover" />
-            )}
-            <div className="p-6">
-              <div className="flex items-start justify-between gap-4">
-                <h3 className="font-display text-2xl text-cream">{selected.name}</h3>
-                <span className="text-base font-semibold text-amber">
-                  {thb(selected.priceTHB)}
-                </span>
+            <img
+              src={selectedDish.image}
+              alt={selectedDish.name}
+              style={{ width: '100%', height: '100%', minHeight: 240, objectFit: 'cover' }}
+            />
+            <div style={{ padding: 26 }}>
+              <h2 style={{ margin: 0, fontSize: 25, fontWeight: 800, color: T.ink }}>
+                {selectedDish.name}
+              </h2>
+              <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.75, marginTop: 10 }}>
+                {selectedDish.description}
+              </p>
+              <div style={{ fontSize: 21, fontWeight: 800, color: T.wine, marginTop: 12 }}>
+                ฿{selectedDish.priceTHB}
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-sand">{selected.description}</p>
-              {selected.ingredients.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {selected.ingredients.map((ing) => (
-                    <Chip key={ing}>{ing}</Chip>
-                  ))}
-                </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    borderRadius: 999,
+                    padding: '6px 12px',
+                    color: selectedDish.type === 'veg' ? '#166534' : '#9B1C1C',
+                    background:
+                      selectedDish.type === 'veg' ? 'rgba(22,101,52,0.1)' : 'rgba(155,28,28,0.1)',
+                  }}
+                >
+                  {selectedDish.type === 'veg' ? 'Veg' : 'Non-Veg'}
+                </span>
+                {selectedDish.spiceLevel && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      borderRadius: 999,
+                      padding: '6px 12px',
+                      color: T.wine,
+                      background: 'rgba(224,138,43,0.12)',
+                    }}
+                  >
+                    {selectedDish.spiceLevel}
+                  </span>
+                )}
+              </div>
+              {Array.isArray(selectedDish.ingredients) && selectedDish.ingredients.length > 0 && (
+                <p style={{ fontSize: 12.5, color: T.muted, marginTop: 16, lineHeight: 1.7 }}>
+                  <strong style={{ color: T.wine }}>Ingredients: </strong>
+                  {selectedDish.ingredients.join(', ')}
+                </p>
               )}
               <button
-                onClick={() => setSelected(null)}
-                className="mt-6 h-11 w-full rounded-full border border-line text-sm text-sand hover:border-amber/50 hover:text-amber"
+                type="button"
+                onClick={() => setSelectedDish(null)}
+                style={{
+                  marginTop: 22,
+                  padding: '11px 20px',
+                  borderRadius: 999,
+                  border: `1px solid ${T.line}`,
+                  background: 'transparent',
+                  color: T.wine,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                }}
               >
                 Close
               </button>
@@ -820,290 +1545,82 @@ function PublicSite() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
 
-/* ========================================================================== */
-/* Admin surface (only mounted behind /unlock-admin?k=…)                       */
-/* ========================================================================== */
-
-function AdminLogin({
-  onSubmit,
-}: {
-  onSubmit: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-}) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  return (
-    <div className="grid min-h-screen place-items-center bg-ink px-4">
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setBusy(true);
-          setError(null);
-          const res = await onSubmit(email.trim(), password);
-          if (!res.ok) setError(res.error ?? "Sign-in failed.");
-          setBusy(false);
-        }}
-        className="w-full max-w-sm rounded-3xl border border-line bg-coal p-7"
-      >
-        <h1 className="font-display text-2xl text-cream">Staff sign in</h1>
-        <p className="mt-2 text-xs leading-relaxed text-husk">
-          This link only hides the form. Access is granted by your account
-          credentials and admin role, verified on the server.
-        </p>
-
-        <label className="mt-6 block text-xs font-semibold uppercase tracking-wider text-husk">
-          Email
-        </label>
-        <input
-          type="email"
-          autoComplete="username"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mt-2 h-11 w-full rounded-xl border border-line bg-ink px-4 text-sm text-cream outline-none focus:border-amber/60"
-        />
-
-        <label className="mt-4 block text-xs font-semibold uppercase tracking-wider text-husk">
-          Password
-        </label>
-        <input
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-2 h-11 w-full rounded-xl border border-line bg-ink px-4 text-sm text-cream outline-none focus:border-amber/60"
-        />
-
-        {error && <p className="mt-4 text-sm text-danger">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={busy}
-          className="mt-6 h-11 w-full rounded-full bg-amber text-sm font-semibold text-ink transition-colors hover:bg-amberhi disabled:opacity-60"
+      {/* INFO MODAL */}
+      {selectedInfoType && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedInfoType(null);
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 90,
+            background: 'rgba(43,26,14,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 18,
+          }}
         >
-          {busy ? "Signing in…" : "Sign in"}
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function AdminDashboard({
-  email,
-  onSignOut,
-}: {
-  email: string | null;
-  onSignOut: () => void;
-}) {
-  const [rows, setRows] = useState<Dish[]>([]);
-  const [state, setState] = useState<LoadState>("loading");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const refresh = useCallback(async () => {
-    setState("loading");
-    try {
-      setRows(await AdminData.listAllDishes());
-      setState("ready");
-    } catch (e: any) {
-      setError(e?.message ?? "Load failed");
-      setState("error");
-    }
-  }, []);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  const remove = async (d: Dish) => {
-    if (!window.confirm(`Permanently delete “${d.name}”? This cannot be undone.`)) return;
-    setError(null);
-    try {
-      await AdminData.deleteDish(d.id);
-      // Re-read from Supabase so the UI can never show a stale/optimistic list.
-      await refresh();
-      setMessage(`Deleted “${d.name}”.`);
-    } catch (e: any) {
-      setError(e?.message ?? "Delete failed — check your admin role and RLS policy.");
-    }
-  };
-
-  const toggleActive = async (d: Dish) => {
-    setError(null);
-    try {
-      await AdminData.setDishActive(d.id, !d.active);
-      await refresh();
-    } catch (e: any) {
-      setError(e?.message ?? "Update failed.");
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-ink text-cream">
-      <header className="border-b border-line/70 bg-ink2">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div>
-            <p className="font-display text-xl text-cream">Kitchen admin</p>
-            <p className="text-xs text-husk">{email}</p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => void refresh()}
-              className="h-10 rounded-full border border-line px-4 text-sm text-sand hover:border-amber/50 hover:text-amber"
-            >
-              Refresh
-            </button>
-            <button
-              onClick={onSignOut}
-              className="h-10 rounded-full bg-amber px-4 text-sm font-semibold text-ink hover:bg-amberhi"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        {message && <p className="mb-4 text-sm text-ok">{message}</p>}
-        {error && <p className="mb-4 text-sm text-danger">{error}</p>}
-
-        {state === "loading" && <p className="text-sm text-sand">Loading dishes…</p>}
-        {state === "error" && (
-          <p className="text-sm text-danger">Could not load dishes. {error}</p>
-        )}
-
-        {state === "ready" && (
-          <div className="overflow-hidden rounded-2xl border border-line">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-ink2 text-xs uppercase tracking-wider text-husk">
-                <tr>
-                  <th className="px-4 py-3">Dish</th>
-                  <th className="px-4 py-3">Category</th>
-                  <th className="px-4 py-3">Price</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((d) => (
-                  <tr key={d.id} className="border-t border-line/70">
-                    <td className="px-4 py-3 text-cream">{d.name}</td>
-                    <td className="px-4 py-3 text-sand">{d.category}</td>
-                    <td className="px-4 py-3 text-sand">{thb(d.priceTHB)}</td>
-                    <td className="px-4 py-3">
-                      <span className={d.active ? "text-ok" : "text-husk"}>
-                        {d.active ? "Live" : "Hidden"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => void toggleActive(d)}
-                          className="h-9 rounded-full border border-line px-3 text-xs text-sand hover:border-amber/50 hover:text-amber"
-                        >
-                          {d.active ? "Hide" : "Show"}
-                        </button>
-                        <button
-                          onClick={() => void remove(d)}
-                          className="h-9 rounded-full border border-danger/50 px-3 text-xs text-danger hover:bg-danger/10"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {rows.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-sm text-husk">
-                      No dishes in the database. Nothing is auto-seeded — add dishes
-                      deliberately.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
-
-/** Rendered for a wrong/missing key: indistinguishable from a real 404. */
-function NotFound() {
-  return (
-    <div className="grid min-h-screen place-items-center bg-ink px-6 text-center">
-      <div>
-        <p className="font-display text-5xl text-cream">404</p>
-        <p className="mt-3 text-sm text-sand">This page could not be found.</p>
-        <a
-          href="/"
-          className="mt-6 inline-flex h-11 items-center rounded-full bg-amber px-6 text-sm font-semibold text-ink hover:bg-amberhi"
-        >
-          Back to the restaurant
-        </a>
-      </div>
-    </div>
-  );
-}
-
-function AdminRoute() {
-  const { session, signIn, signOut } = useAdminSession(true);
-
-  if (session.status === "checking") {
-    return (
-      <div className="grid min-h-screen place-items-center bg-ink text-sand">
-        <span className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-amber" />
-      </div>
-    );
-  }
-  if (session.status === "anon") return <AdminLogin onSubmit={signIn} />;
-  if (session.status === "denied") {
-    return (
-      <div className="grid min-h-screen place-items-center bg-ink px-6 text-center">
-        <div>
-          <p className="font-display text-2xl text-cream">Not authorised</p>
-          <p className="mt-3 text-sm text-sand">
-            This account is signed in but has no admin role.
-          </p>
-          <button
-            onClick={() => void signOut()}
-            className="mt-6 h-11 rounded-full border border-line px-6 text-sm text-sand hover:border-amber/50 hover:text-amber"
+          <div
+            style={{
+              background: T.paper,
+              borderRadius: 22,
+              maxWidth: 600,
+              width: '100%',
+              padding: 28,
+              maxHeight: '85vh',
+              overflowY: 'auto',
+            }}
           >
-            Sign out
-          </button>
+            <h2 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: T.ink }}>
+              {selectedInfoType === 'about'
+                ? `About ${restaurantInfo.name}`
+                : selectedInfoType === 'contact'
+                ? 'Contact Information'
+                : selectedInfoType === 'privacy'
+                ? 'Privacy Policy'
+                : 'Terms of Service'}
+            </h2>
+            <p
+              style={{
+                whiteSpace: 'pre-wrap',
+                fontSize: 14,
+                lineHeight: 1.8,
+                color: T.muted,
+                marginTop: 14,
+              }}
+            >
+              {selectedInfoType === 'about'
+                ? 'A premium culinary destination celebrating authentic flavours, fresh ingredients and chef-crafted experiences.'
+                : selectedInfoType === 'contact'
+                ? `📍 ${restaurantInfo.address}\n\n📞 ${restaurantInfo.phone}\n\n🕒 ${restaurantInfo.openingHours}`
+                : selectedInfoType === 'privacy'
+                ? 'We value your privacy and use information only to improve your browsing experience. No ordering or reservation data is collected on this site.'
+                : 'All menu items and prices are subject to availability and seasonal updates. This site is informational only.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => setSelectedInfoType(null)}
+              style={{
+                marginTop: 20,
+                padding: '11px 20px',
+                borderRadius: 999,
+                border: `1px solid ${T.line}`,
+                background: 'transparent',
+                color: T.wine,
+                fontWeight: 800,
+                cursor: 'pointer',
+              }}
+            >
+              Close
+            </button>
+          </div>
         </div>
-      </div>
-    );
-  }
-  return <AdminDashboard email={session.email} onSignOut={() => void signOut()} />;
-}
-
-/* ========================================================================== */
-/* Root                                                                        */
-/* ========================================================================== */
-
-export default function App() {
-  const { path, search } = useLocation();
-
-  const normalized = path.replace(/\/+$/, "") || "/";
-
-  if (normalized === "/unlock-admin") {
-    const provided = new URLSearchParams(search).get("k") ?? "";
-    if (!keyMatches(provided)) return <NotFound />;
-    return <AdminRoute />;
-  }
-
-  // Legacy /admin path is no longer an entry point.
-  if (normalized === "/admin") return <NotFound />;
-
-  return <PublicSite />;
+      )}
+    </div>
+  );
 }
