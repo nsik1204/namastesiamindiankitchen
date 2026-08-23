@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { adminApiFetch } from "../../services/menuService";
+import { MenuService } from "../../services/menuService";
 import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from '../../types';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 
@@ -187,16 +187,13 @@ export default function AdminDashboard({
     setIsSaving(true);
     try {
       const active = !dish.active;
-      await adminApiFetch('toggle-active', { type: 'dish', id: dish.id, active });
-      const res = { ok: true };
-      if (res.ok) {
-        onUpdateDishes(dishes.map(d => d.id === dish.id ? { ...d, active } : d));
-        showToast(active ? 'Re-enabled' : 'Disabled', 'info');
-      } else {
-        showToast('Failed to toggle active state', 'error');
-      }
+      const updated = dishes.map(d => d.id === dish.id ? { ...d, active } : d);
+      await MenuService.saveDishes(updated);
+      onUpdateDishes(updated);
+      showToast(active ? 'Re-enabled' : 'Disabled', 'info');
     } catch (err) {
-      showToast('Error', 'error');
+      console.error('Failed to toggle dish active state:', err);
+      showToast(err instanceof Error ? err.message : 'Failed to toggle active state', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -206,16 +203,13 @@ export default function AdminDashboard({
     setIsSaving(true);
     try {
       const active = !cat.active;
-      await adminApiFetch('toggle-active', { type: 'category', id: cat.id, slug: cat.slug, active });
-      const res = { ok: true };
-      if (res.ok) {
-        onUpdateCategories(categories.map(c => c.id === cat.id ? { ...c, active } : c));
-        showToast(active ? 'Re-enabled' : 'Disabled', 'info');
-      } else {
-        showToast('Failed to toggle active state', 'error');
-      }
+      const updated = categories.map(c => c.id === cat.id ? { ...c, active } : c);
+      await MenuService.saveCategories(updated);
+      onUpdateCategories(updated);
+      showToast(active ? 'Re-enabled' : 'Disabled', 'info');
     } catch (err) {
-      showToast('Error', 'error');
+      console.error('Failed to toggle category active state:', err);
+      showToast(err instanceof Error ? err.message : 'Failed to toggle active state', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -224,14 +218,16 @@ export default function AdminDashboard({
   const handleDeleteDish = async (id: number, name: string) => {
     if (window.confirm(`WARNING: You are about to PERMANENTLY delete and purge "${name}" from the database.\n\nThis action is completely IRREVERSIBLE and cannot be undone.\n\n-> If you just want to take this item off the public website temporarily, click CANCEL and use "Soft Delete", "Hide", or "Disable" instead.\n\nAre you absolutely sure you want to PERMANENTLY purge this item?`)) {
       setIsSaving(true);
-      await new Promise(r => setTimeout(r, 450));
-      await adminApiFetch('delete', { type: 'dish', id });
-      const res = { ok: true };
-      if (res.ok) {
+      try {
+        await MenuService.deleteDish(id);
         onUpdateDishes(dishes.filter(d => d.id !== id));
+        showToast(`Permanently deleted and purged "${name}".`, 'info');
+      } catch (err) {
+        console.error('Failed to delete dish:', err);
+        showToast(err instanceof Error ? err.message : `Failed to delete "${name}".`, 'error');
+      } finally {
+        setIsSaving(false);
       }
-      setIsSaving(false);
-      showToast(`Permanently deleted and purged "${name}".`, 'info');
     }
   };
 
@@ -535,12 +531,17 @@ export default function AdminDashboard({
       return;
     }
 
-    await adminApiFetch('delete', { type: 'category', id });
-      const res = { ok: true };
-      if (res.ok) {
-        onUpdateCategories(categories.filter(c => c.id !== id));
-      }
-    showToast(`Permanently deleted and purged category "${label}".`, 'info');
+    setIsSaving(true);
+    try {
+      await MenuService.deleteCategory(id);
+      onUpdateCategories(categories.filter(c => c.id !== id));
+      showToast(`Permanently deleted and purged category "${label}".`, 'info');
+    } catch (err) {
+      console.error('Failed to delete category:', err);
+      showToast(err instanceof Error ? err.message : `Failed to delete category "${label}".`, 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
 
