@@ -525,32 +525,40 @@ export default function AdminDashboard({
 
   const handleDeleteCategory = async (id: string, label: string) => {
     if (id === 'all') {
-      showToast('Standard primary "All" filters category cannot be deleted.', 'error');
-      return;
+        showToast('Standard primary "All" filters category cannot be deleted.', 'error');
+        return;
     }
 
     const attachedDishesCount = dishes.filter(d => d.category === id).length;
     let warningMsg = '';
     if (attachedDishesCount > 0) {
-      warningMsg = `WARNING: Category "${label}" has ${attachedDishesCount} linked cuisines. Deleting this key will leave those catalog items category-orphaned.\n\n`;
+        warningMsg = `WARNING: Category "${label}" has ${attachedDishesCount} linked cuisines. Deleting this key will leave those catalog items category-orphaned.\n\n`;
     }
 
-    if (!window.confirm(`${warningMsg}WARNING: You are about to PERMANENTLY delete and purge the Category "${label}".\n\nThis action is completely IRREVERSIBLE and cannot be undone.\n\n-> If you just want to temporarily hide this category from the website tabs, click CANCEL and use "Soft Delete", "Hide", or "Disable" instead.\n\nAre you absolutely sure you want to PERMANENTLY purge this category?`)) {
-      return;
+    if (!window.confirm(`${warningMsg}WARNING: You are about to PERMANENTLY delete and purge the Category "${label}".\n\nThis action is completely IRREVERSIBLE and cannot be undone.\n\nAre you absolutely sure you want to PERMANENTLY purge this category?`)) {
+        return;
     }
 
     setIsSaving(true);
     try {
-      await MenuService.deleteCategory(id);
-      onUpdateCategories(categories.filter(c => c.id !== id));
-      showToast(`Permanently deleted and purged category "${label}".`, 'info');
+        console.log(" AdminDashboard: Deleting category", id, label);
+        
+        // Delete from DB first
+        await MenuService.deleteCategory(id);
+        
+        // ✅ Force re-fetch from database instead of just filtering local state
+        const freshCategories = await MenuService.getCategories();
+        onUpdateCategories(freshCategories);
+        
+        showToast(`Permanently deleted and purged category "${label}".`, 'info');
+        console.log("✅ Category deleted and UI refreshed from DB");
     } catch (err) {
-      console.error('Failed to delete category:', err);
-      showToast(err instanceof Error ? err.message : `Failed to delete category "${label}".`, 'error');
+        console.error('❌ Failed to delete category:', err);
+        showToast(err instanceof Error ? err.message : `Failed to delete category "${label}".`, 'error');
     } finally {
-      setIsSaving(false);
+        setIsSaving(false);
     }
-  };
+};
 
 
   // ==========================================

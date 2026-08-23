@@ -200,27 +200,51 @@ export const MenuService = {
     const supabase = requireClient();
     const realCats = cats.filter(c => c.id !== 'all');
     const rows = realCats.map(mapCategoryToRow);
+    
+    // Fetch existing IDs from DB to compare
     const { data: existing, error: readErr } = await supabase.from('categories').select('id');
     if (readErr) fail('read categories', readErr);
+    
+    // Use String() for safe comparison (handles both string and number IDs)
     const keepIds = new Set(rows.map(r => String(r.id)));
-    const removeIds = (existing || []).map((r: any) => String(r.id)).filter((id: string) => !keepIds.has(id));
+    const removeIds = (existing || [])
+        .map((r: any) => String(r.id))
+        .filter((id: string) => !keepIds.has(id));
+    
+    // Upsert current list
     if (rows.length > 0) {
-      const { error } = await supabase.from('categories').upsert(rows, { onConflict: 'id' });
-      if (error) fail('save categories', error);
+        const { error } = await supabase.from('categories').upsert(rows, { onConflict: 'id' });
+        if (error) fail('save categories', error);
     }
+    
+    // Delete removed items
     if (removeIds.length > 0) {
-      const { error } = await supabase.from('categories').delete().in('id', removeIds);
-      if (error) fail('delete removed categories', error);
+        const { error } = await supabase.from('categories').delete().in('id', removeIds);
+        if (error) fail('delete removed categories', error);
     }
-  },
+},
 
   async deleteCategory(id: string): Promise<void> {
     const supabase = requireClient();
-    console.log("🔴 Deleting category:", id);
-    const { error } = await supabase.from('categories').delete().eq('id', id);
-    if (error) fail(`delete category "${id}"`, error);
-    console.log("✅ Category deleted successfully");
-  },
+    console.log("🔴 Attempting to delete category:", id);
+    
+    const { data, error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id)
+        .select(); // Returns deleted row(s) or empty array
+    
+    if (error) {
+        console.error("❌ Supabase delete error:", error);
+        fail(`delete category "${id}"`, error);
+    }
+    
+    console.log("✅ Supabase delete response:", data);
+    if (!data || data.length === 0) {
+        console.warn("⚠️ WARNING: 0 rows deleted! Check RLS policies or if ID exists.");
+        throw new Error(`Failed to delete category "${id}". It may not exist or RLS is blocking it.`);
+    }
+},
 
   async getDishes(): Promise<Dish[]> {
     const supabase = requireClient();
