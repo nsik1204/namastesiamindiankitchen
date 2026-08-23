@@ -450,6 +450,52 @@ function NotFound({ onHome }: { onHome: () => void }) {
 }
 
 /* ================================================================== */
+/* Empty shells (NOT seed data) — used only so the public UI can render */
+/* when the database is unreachable or genuinely empty.                */
+/* ================================================================== */
+const EMPTY_RESTAURANT_INFO: RestaurantInfo = {
+  name: 'Namaste Siam Indian Kitchen',
+  address: '',
+  phone: '',
+  openingHours: '',
+  instagram: '',
+  website: '',
+  diningStyle: '',
+  whatsappNumber: '',
+  whatsappMessage: '',
+  lineId: '',
+  lineQrUrl: '',
+  contactActiveChannel: 'disabled',
+};
+
+const EMPTY_ABOUT_INFO: AboutInfo = { story: [], highlights: [] };
+
+const LOAD_TIMEOUT_MS = 12000;
+
+function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(
+      () => reject(new Error(`${label} timed out after ${Math.round(LOAD_TIMEOUT_MS / 1000)}s`)),
+      LOAD_TIMEOUT_MS
+    );
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        window.clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
+function reasonText(reason: unknown): string {
+  return reason instanceof Error ? reason.message : String(reason);
+}
+
+/* ================================================================== */
 /* App                                                                 */
 /* ================================================================== */
 export default function App() {
@@ -491,29 +537,68 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
+
     (async () => {
-      try {
-        const [info, about, cats, allDishes, items] = await Promise.all([
-          MenuService.getRestaurantInfo(),
-          MenuService.getAboutInfo(),
-          MenuService.getCategories(),
-          MenuService.getDishes(),
-          MenuService.getGalleryItems(),
-        ]);
-        if (!active) return;
-        setRestaurantInfo(info);
-        setAboutInfo(about);
-        setCategories(cats);
-        setDishes(allDishes);
-        setGallery(items);
-        setLoadError(null);
-      } catch (err) {
-        if (!active) return;
-        setLoadError(err instanceof Error ? err.message : 'Failed to load menu data.');
-      } finally {
-        if (active) setLoading(false);
+      const results = await Promise.allSettled([
+        withTimeout(MenuService.getRestaurantInfo(), 'Restaurant info request'),
+        withTimeout(MenuService.getAboutInfo(), 'About info request'),
+        withTimeout(MenuService.getCategories(), 'Categories request'),
+        withTimeout(MenuService.getDishes(), 'Dishes request'),
+        withTimeout(MenuService.getGalleryItems(), 'Gallery request'),
+      ]);
+      if (!active) return;
+
+      const [infoRes, aboutRes, catsRes, dishesRes, galleryRes] = results;
+      const problems: string[] = [];
+
+      // Restaurant info: fall back to an EMPTY shell (no seed content) so the
+      // public UI still renders instead of hanging.
+      if (infoRes.status === 'fulfilled' && infoRes.value) {
+        setRestaurantInfo(infoRes.value);
+      } else {
+        setRestaurantInfo(EMPTY_RESTAURANT_INFO);
+        if (infoRes.status === 'rejected') problems.push(reasonText(infoRes.reason));
       }
+
+      if (aboutRes.status === 'fulfilled' && aboutRes.value) {
+        setAboutInfo(aboutRes.value);
+      } else {
+        setAboutInfo(EMPTY_ABOUT_INFO);
+        if (aboutRes.status === 'rejected') problems.push(reasonText(aboutRes.reason));
+      }
+
+      // Collections: ONLY database rows are ever shown. On failure we show
+      // nothing rather than stale/static/deleted items.
+      if (catsRes.status === 'fulfilled') setCategories(catsRes.value ?? []);
+      else {
+        setCategories([]);
+        problems.push(reasonText(catsRes.reason));
+      }
+
+      if (dishesRes.status === 'fulfilled') setDishes(dishesRes.value ?? []);
+      else {
+        setDishes([]);
+        problems.push(reasonText(dishesRes.reason));
+      }
+
+      if (galleryRes.status === 'fulfilled') setGallery(galleryRes.value ?? []);
+      else {
+        setGallery([]);
+        problems.push(reasonText(galleryRes.reason));
+      }
+
+      if (problems.length) {
+        console.error('Menu data load problems:', problems);
+        setLoadError(Array.from(new Set(problems)).join(' | '));
+      } else {
+        setLoadError(null);
+      }
+
+      // Loading is ALWAYS finite: every branch above is reached after
+      // Promise.allSettled, which cannot reject and cannot hang past the timeout.
+      setLoading(false);
     })();
+
     return () => {
       active = false;
     };
@@ -792,35 +877,29 @@ export default function App() {
     );
   }
 
-  if (!restaurantInfo || !aboutInfo) {
-    return (
-      <>
-        <Background />
-        <div
-          style={{
-            position: 'relative',
-            zIndex: 10,
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 24,
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ maxWidth: 460 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: T.ink, margin: '0 0 8px' }}>
-              Menu temporarily unavailable
-            </h1>
-            <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7 }}>
-              We could not reach the kitchen database. Please refresh in a moment.
-              {loadError ? ` (${loadError})` : ''}
-            </p>
-          </div>
-        </div>
-      </>
-    );
-  }
+  const info: RestaurantInfo = restaurantInfo ?? EMPTY_RESTAURANT_INFO;
+  const about: AboutInfo = aboutInfo ?? EMPTY_ABOUT_INFO;
+
+  const DataNotice = () =>
+    loadError ? (
+      <div
+        role="alert"
+        style={{
+          position: 'relative',
+          zIndex: 30,
+          background: '#FDECEC',
+          borderBottom: '1px solid #E9B4B4',
+          color: '#7A1F1F',
+          padding: '10px 16px',
+          fontSize: 12.5,
+          lineHeight: 1.6,
+          textAlign: 'center',
+        }}
+      >
+        <strong>Live menu data could not be loaded.</strong> The kitchen database is unreachable or
+        not configured, so no dishes are shown. Details: {loadError}
+      </div>
+    ) : null;
 
   const sectionStyle: React.CSSProperties = {
     maxWidth: 1180,
@@ -858,6 +937,7 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', position: 'relative', color: T.ink }}>
       <Background />
+      <DataNotice />
 
       <div style={{ position: 'relative', zIndex: 10 }}>
         {/* HEADER */}
@@ -1255,7 +1335,7 @@ export default function App() {
 
         {/* ABOUT */}
         <section id="about" style={sectionStyle}>
-          <SectionTitle lead="About" accent={restaurantInfo.name} />
+          <SectionTitle lead="About" accent={info.name} />
           <div
             style={{
               ...cardStyle,
@@ -1266,7 +1346,7 @@ export default function App() {
             }}
           >
             <div>
-              {aboutInfo.story.map((para, i) => (
+              {about.story.map((para, i) => (
                 <p
                   key={`story-${i}`}
                   style={{
@@ -1282,7 +1362,7 @@ export default function App() {
               ))}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignContent: 'flex-start' }}>
-              {aboutInfo.highlights.map((h, i) => (
+              {about.highlights.map((h, i) => (
                 <span
                   key={`hl-${i}`}
                   style={{
@@ -1313,12 +1393,12 @@ export default function App() {
             }}
           >
             {[
-              ['📍 Address', restaurantInfo.address],
-              ['📞 Phone', restaurantInfo.phone],
-              ['🕒 Opening Hours', restaurantInfo.openingHours],
-              ['📷 Instagram', restaurantInfo.instagram],
-              ['🌐 Website', restaurantInfo.website],
-              ['🍽️ Dining Style', restaurantInfo.diningStyle],
+              ['📍 Address', info.address],
+              ['📞 Phone', info.phone],
+              ['🕒 Opening Hours', info.openingHours],
+              ['📷 Instagram', info.instagram],
+              ['🌐 Website', info.website],
+              ['🍽️ Dining Style', info.diningStyle],
             ].map(([title, value]) => (
               <div key={title as string} style={cardStyle}>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: T.wine }}>{title}</h3>
@@ -1382,7 +1462,7 @@ export default function App() {
           >
             <div>
               <div style={{ fontSize: 19, fontWeight: 800, color: T.milk }}>
-                {restaurantInfo.name}
+                {info.name}
               </div>
               <p style={{ fontSize: 13, lineHeight: 1.75, marginTop: 10 }}>
                 Premium restaurant menu experience with authentic flavours, elegant ambience and
@@ -1392,9 +1472,9 @@ export default function App() {
             <div>
               <h4 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: T.milk }}>Restaurant</h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0 0', fontSize: 13 }}>
-                <li style={{ marginBottom: 8 }}>📍 {restaurantInfo.address}</li>
-                <li style={{ marginBottom: 8 }}>📞 {restaurantInfo.phone}</li>
-                <li>🕒 {restaurantInfo.openingHours}</li>
+                <li style={{ marginBottom: 8 }}>📍 {info.address}</li>
+                <li style={{ marginBottom: 8 }}>📞 {info.phone}</li>
+                <li>🕒 {info.openingHours}</li>
               </ul>
             </div>
             <div>
@@ -1437,7 +1517,7 @@ export default function App() {
               opacity: 0.75,
             }}
           >
-            © {new Date().getFullYear()} {restaurantInfo.name}. All rights reserved.
+            © {new Date().getFullYear()} {info.name}. All rights reserved.
           </div>
         </footer>
       </div>
@@ -1578,7 +1658,7 @@ export default function App() {
           >
             <h2 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: T.ink }}>
               {selectedInfoType === 'about'
-                ? `About ${restaurantInfo.name}`
+                ? `About ${info.name}`
                 : selectedInfoType === 'contact'
                 ? 'Contact Information'
                 : selectedInfoType === 'privacy'
@@ -1597,7 +1677,7 @@ export default function App() {
               {selectedInfoType === 'about'
                 ? 'A premium culinary destination celebrating authentic flavours, fresh ingredients and chef-crafted experiences.'
                 : selectedInfoType === 'contact'
-                ? `📍 ${restaurantInfo.address}\n\n📞 ${restaurantInfo.phone}\n\n🕒 ${restaurantInfo.openingHours}`
+                ? `📍 ${info.address}\n\n📞 ${info.phone}\n\n🕒 ${info.openingHours}`
                 : selectedInfoType === 'privacy'
                 ? 'We value your privacy and use information only to improve your browsing experience. No ordering or reservation data is collected on this site.'
                 : 'All menu items and prices are subject to availability and seasonal updates. This site is informational only.'}
