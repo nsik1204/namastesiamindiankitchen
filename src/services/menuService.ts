@@ -27,7 +27,14 @@ export function generateSlug(text: string): string {
     .replace(/-+/g, '-');
 }
 
+// ✅ FIX: Safe ID to string converter - handles number, string, UUID, null
+function safeId(id: any): string | undefined {
+  if (id === undefined || id === null || id === '') return undefined;
+  return String(id);
+}
+
 function mapDbDishToDish(db: any): Dish {
+  const normId = db.id !== undefined && db.id !== null ? Number(db.id) || 1 : 1;
   return {
     id: db.id,
     slug: db.slug || generateSlug(db.name),
@@ -45,11 +52,11 @@ function mapDbDishToDish(db: any): Dish {
     customerFavorite: !!db.customer_favorite,
     todaySpecial: !!db.today_special,
     image: db.image_url,
-    display_order: db.display_order !== undefined && db.display_order !== null ? Number(db.display_order) : 0,
-    display_order_today: db.display_order_today !== undefined && db.display_order_today !== null ? Number(db.display_order_today) : 0,
-    display_order_chef: db.display_order_chef !== undefined && db.display_order_chef !== null ? Number(db.display_order_chef) : 0,
-    display_order_popular: db.display_order_popular !== undefined && db.display_order_popular !== null ? Number(db.display_order_popular) : 0,
-    display_order_favorite: db.display_order_favorite !== undefined && db.display_order_favorite !== null ? Number(db.display_order_favorite) : 0,
+    display_order: db.display_order !== undefined && db.display_order !== null ? Number(db.display_order) : normId,
+    display_order_today: db.display_order_today !== undefined && db.display_order_today !== null ? Number(db.display_order_today) : normId,
+    display_order_chef: db.display_order_chef !== undefined && db.display_order_chef !== null ? Number(db.display_order_chef) : normId,
+    display_order_popular: db.display_order_popular !== undefined && db.display_order_popular !== null ? Number(db.display_order_popular) : normId,
+    display_order_favorite: db.display_order_favorite !== undefined && db.display_order_favorite !== null ? Number(db.display_order_favorite) : normId,
     active: db.active !== undefined && db.active !== null ? !!db.active : (db.is_available !== undefined && db.is_available !== null ? !!db.is_available : true)
   };
 }
@@ -80,9 +87,10 @@ function mapDishToRow(d: Dish): any {
     display_order_favorite: d.display_order_favorite || 0,
     updated_at: new Date().toISOString()
   };
-  // ✅ FIX: Properly handle both string (UUID) and number IDs
-  if (d.id !== undefined && d.id !== null && d.id !== '') {
-    row.id = d.id;
+  // ✅ FIX: Always include id if it exists - don't check Number(id) > 0
+  const idStr = safeId(d.id);
+  if (idStr !== undefined) {
+    row.id = d.id; // Keep original type (string or number)
   }
   return row;
 }
@@ -113,8 +121,8 @@ function mapGalleryToRow(item: GalleryItem, idx: number): any {
     is_visible: item.active !== false,
     updated_at: new Date().toISOString()
   };
-  // ✅ FIX: Properly handle both string and number IDs
-  if (item.id !== undefined && item.id !== null && item.id !== '') {
+  const idStr = safeId(item.id);
+  if (idStr !== undefined) {
     row.id = item.id;
   }
   return row;
@@ -125,16 +133,11 @@ export const MenuService = {
     const supabase = requireClient();
     const { data: infoList, error: infoError } = await supabase.from('restaurant_info').select('*').limit(1);
     if (infoError) fail('read restaurant_info', infoError);
-    
     const { data: chatList, error: chatError } = await supabase.from('chat_settings').select('*').limit(1);
     if (chatError) fail('read chat_settings', chatError);
-    
     const infoRow = infoList?.[0];
-    if (!infoRow) {
-      throw new Error('No row found in restaurant_info. Add the restaurant profile row in the database.');
-    }
+    if (!infoRow) throw new Error('No row found in restaurant_info.');
     const chatRow = chatList?.[0] || {};
-    
     return {
       name: infoRow.name,
       address: infoRow.address,
@@ -155,201 +158,11 @@ export const MenuService = {
     const supabase = requireClient();
     const { data: existingInfo, error: readInfoErr } = await supabase.from('restaurant_info').select('id').limit(1);
     if (readInfoErr) fail('read restaurant_info', readInfoErr);
-    
     const infoRow: any = {
-      name: info.name,
-      address: info.address,
-      phone: info.phone,
-      opening_hours: info.openingHours,
-      instagram: info.instagram,
-      website: info.website,
-      dining_style: info.diningStyle,
+      name: info.name, address: info.address, phone: info.phone,
+      opening_hours: info.openingHours, instagram: info.instagram,
+      website: info.website, dining_style: info.diningStyle,
       updated_at: new Date().toISOString()
     };
     if (existingInfo?.[0]?.id) infoRow.id = existingInfo[0].id;
-    
-    const { error: infoErr } = await supabase.from('restaurant_info').upsert(infoRow);
-    if (infoErr) fail('save restaurant_info', infoErr);
-    
-    const { data: existingChat, error: readChatErr } = await supabase.from('chat_settings').select('id').limit(1);
-    if (readChatErr) fail('read chat_settings', readChatErr);
-    
-    const chatRow: any = {
-      whatsapp_number: info.whatsappNumber || '',
-      whatsapp_default_message: info.whatsappMessage || '',
-      line_id: info.lineId || '',
-      line_qr_url: info.lineQrUrl || '',
-      contact_active_channel: info.contactActiveChannel || 'both',
-      updated_at: new Date().toISOString()
-    };
-    if (existingChat?.[0]?.id) chatRow.id = existingChat[0].id;
-    
-    const { error: chatErr } = await supabase.from('chat_settings').upsert(chatRow);
-    if (chatErr) fail('save chat_settings', chatErr);
-  },
-
-  async getAboutInfo(): Promise<AboutInfo> {
-    const supabase = requireClient();
-    const { data, error } = await supabase.from('about_info').select('*').limit(1);
-    if (error) fail('read about_info', error);
-    const row = data?.[0];
-    if (!row) {
-      throw new Error('No row found in about_info. Add the about content row in the database.');
-    }
-    return {
-      story: row.story_paragraphs || [],
-      highlights: row.highlights || []
-    };
-  },
-
-  async saveAboutInfo(about: AboutInfo): Promise<void> {
-    const supabase = requireClient();
-    const { data: existing, error: readErr } = await supabase.from('about_info').select('id').limit(1);
-    if (readErr) fail('read about_info', readErr);
-    
-    const row: any = {
-      story_paragraphs: about.story || [],
-      highlights: about.highlights || [],
-      updated_at: new Date().toISOString()
-    };
-    if (existing?.[0]?.id) row.id = existing[0].id;
-    
-    const { error } = await supabase.from('about_info').upsert(row);
-    if (error) fail('save about_info', error);
-  },
-
-  async getCategories(): Promise<Category[]> {
-    const supabase = requireClient();
-    const { data, error } = await supabase.from('categories').select('*').order('display_order');
-    if (error) fail('read categories', error);
-    
-    const dbCats: Category[] = (data || []).map((c: any) => ({
-      id: String(c.id),
-      slug: c.slug || generateSlug(c.name || c.label || c.id),
-      name: c.name || c.label || c.id,
-      label: c.label || c.name || c.id,
-      display_order: c.display_order !== undefined && c.display_order !== null ? Number(c.display_order) : (Number(c.sort_order) || 0),
-      active: c.active !== undefined && c.active !== null ? !!c.active : (c.is_visible !== undefined && c.is_visible !== null ? !!c.is_visible : true)
-    }));
-    
-    return [
-      { id: 'all', slug: 'all', name: 'All', label: 'All', display_order: 0, active: true } as Category,
-      ...dbCats
-    ];
-  },
-
-  async saveCategories(cats: Category[]): Promise<void> {
-    const supabase = requireClient();
-    const realCats = cats.filter(c => c.id !== 'all');
-    const rows = realCats.map(mapCategoryToRow);
-    const { data: existing, error: readErr } = await supabase.from('categories').select('id');
-    if (readErr) fail('read categories', readErr);
-    
-    // ✅ FIX: Use String() to safely handle both UUIDs and Numbers
-    const keepIds = new Set(rows.map(r => String(r.id)));
-    const removeIds = (existing || []).map((r: any) => String(r.id)).filter((id: string) => !keepIds.has(id));
-    
-    if (rows.length > 0) {
-      const { error } = await supabase.from('categories').upsert(rows, { onConflict: 'id' });
-      if (error) fail('save categories', error);
-    }
-    if (removeIds.length > 0) {
-      const { error } = await supabase.from('categories').delete().in('id', removeIds);
-      if (error) fail('delete removed categories', error);
-    }
-  },
-
-  async deleteCategory(id: string): Promise<void> {
-    const supabase = requireClient();
-    const { error } = await supabase.from('categories').delete().eq('id', id);
-    if (error) fail(`delete category "${id}"`, error);
-  },
-
-  async getDishes(): Promise<Dish[]> {
-    const supabase = requireClient();
-    const { data, error } = await supabase.from('foods').select('*').order('display_order');
-    if (error) fail('read foods', error);
-    return (data || []).map(mapDbDishToDish);
-  },
-
-  async saveDishes(allDishes: Dish[]): Promise<void> {
-    const supabase = requireClient();
-    const rows = allDishes.map(mapDishToRow);
-    const { data: existing, error: readErr } = await supabase.from('foods').select('id');
-    if (readErr) fail('read foods', readErr);
-    
-    // ✅ FIX: Use String() to safely handle both UUIDs and Numbers for Set matching
-    const keepIds = new Set(rows.filter(r => r.id !== undefined && r.id !== null).map(r => String(r.id)));
-    const removeIds = (existing || [])
-      .map((r: any) => String(r.id))
-      .filter((id: string) => !keepIds.has(id));
-    
-    if (rows.length > 0) {
-      const { error } = await supabase.from('foods').upsert(rows, { onConflict: 'id' });
-      if (error) fail('save dishes', error);
-    }
-    if (removeIds.length > 0) {
-      const { error } = await supabase.from('foods').delete().in('id', removeIds);
-      if (error) fail('delete removed dishes', error);
-    }
-  },
-
-  async saveDish(dish: Dish): Promise<Dish> {
-    const supabase = requireClient();
-    const row = mapDishToRow(dish);
-    const { data, error } = await supabase.from('foods').upsert(row, { onConflict: 'id' }).select().single();
-    if (error) fail(`save dish "${dish.name}"`, error);
-    if (!data) throw new Error(`Supabase save dish "${dish.name}" returned no row.`);
-    return mapDbDishToDish(data);
-  },
-
-  // ✅ FIX: Accept both string and number to prevent silent failures
-  async deleteDish(id: number | string): Promise<void> {
-    const supabase = requireClient();
-    const { error } = await supabase.from('foods').delete().eq('id', id);
-    if (error) fail(`delete dish id ${id}`, error);
-  },
-
-  async getGalleryItems(): Promise<GalleryItem[]> {
-    const supabase = requireClient();
-    const { data, error } = await supabase.from('gallery').select('*').order('display_order');
-    if (error) fail('read gallery', error);
-    return (data || []).map((item: any) => ({
-      id: String(item.id),
-      title: item.title || item.alt_text || '',
-      image: item.image_url,
-      alt: item.alt_text || item.title || '',
-      tall: !!item.is_tall,
-      display_order: item.display_order !== undefined && item.display_order !== null ? Number(item.display_order) : (Number(item.sort_order) || 0),
-      active: item.active !== undefined && item.active !== null ? !!item.active : (item.is_visible !== undefined && item.is_visible !== null ? !!item.is_visible : true)
-    }));
-  },
-
-  async saveGalleryItems(items: GalleryItem[]): Promise<void> {
-    const supabase = requireClient();
-    const rows = items.map(mapGalleryToRow);
-    const { data: existing, error: readErr } = await supabase.from('gallery').select('id');
-    if (readErr) fail('read gallery', readErr);
-    
-    // ✅ FIX: Use String() to safely handle both UUIDs and Numbers
-    const keepIds = new Set(rows.filter(r => r.id !== undefined && r.id !== null).map(r => String(r.id)));
-    const removeIds = (existing || [])
-      .map((r: any) => String(r.id))
-      .filter((id: string) => !keepIds.has(id));
-    
-    if (rows.length > 0) {
-      const { error } = await supabase.from('gallery').upsert(rows, { onConflict: 'id' });
-      if (error) fail('save gallery', error);
-    }
-    if (removeIds.length > 0) {
-      const { error } = await supabase.from('gallery').delete().in('id', removeIds);
-      if (error) fail('delete removed gallery items', error);
-    }
-  },
-
-  async deleteGalleryItem(id: string | number): Promise<void> {
-    const supabase = requireClient();
-    const { error } = await supabase.from('gallery').delete().eq('id', id);
-    if (error) fail(`delete gallery item ${id}`, error);
-  }
-};
+    const { error: infoErr } = await supabase.from('restaurant_info
