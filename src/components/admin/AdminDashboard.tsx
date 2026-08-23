@@ -524,40 +524,50 @@ export default function AdminDashboard({
   };
 
   const handleDeleteCategory = async (id: string, label: string) => {
-    if (id === 'all') {
-        showToast('Standard primary "All" filters category cannot be deleted.', 'error');
-        return;
-    }
+  if (id === 'all') {
+    showToast('Standard primary "All" filters category cannot be deleted.', 'error');
+    return;
+  }
 
-    const attachedDishesCount = dishes.filter(d => d.category === id).length;
-    let warningMsg = '';
-    if (attachedDishesCount > 0) {
-        warningMsg = `WARNING: Category "${label}" has ${attachedDishesCount} linked cuisines. Deleting this key will leave those catalog items category-orphaned.\n\n`;
-    }
+  // Check for linked dishes BEFORE attempting delete
+  const attachedDishesCount = dishes.filter(d => d.category === id).length;
+  
+  if (attachedDishesCount > 0) {
+    showToast(
+      `Cannot delete "${label}". It has ${attachedDishesCount} linked dishes. Please move or delete those dishes first, or update the Foreign Key constraint in Supabase to CASCADE.`, 
+      'error'
+    );
+    return;
+  }
 
-    if (!window.confirm(`${warningMsg}Are you absolutely sure you want to PERMANENTLY purge this category?`)) {
-        return;
-    }
+  if (!window.confirm(`WARNING: You are about to PERMANENTLY delete and purge the Category "${label}".\n\nThis action is completely IRREVERSIBLE.\n\nAre you absolutely sure?`)) {
+    return;
+  }
 
-    setIsSaving(true);
-    try {
-        console.log(" AdminDashboard: Deleting category", id, label);
-        
-        // Delete from DB first
-        await MenuService.deleteCategory(id);
-        
-        // ✅ Force re-fetch from database instead of just filtering local state
-        const freshCategories = await MenuService.getCategories();
-        onUpdateCategories(freshCategories);
-        
-        showToast(`Permanently deleted and purged category "${label}".`, 'info');
-        console.log("✅ Category deleted and UI refreshed from DB");
-    } catch (err) {
-        console.error('❌ Failed to delete category:', err);
-        showToast(err instanceof Error ? err.message : `Failed to delete category "${label}".`, 'error');
-    } finally {
-        setIsSaving(false);
+  setIsSaving(true);
+  try {
+    console.log(" AdminDashboard: Deleting category", id, label);
+    
+    await MenuService.deleteCategory(id);
+    
+    // Force re-fetch from database
+    const freshCategories = await MenuService.getCategories();
+    onUpdateCategories(freshCategories);
+    
+    showToast(`Permanently deleted and purged category "${label}".`, 'info');
+    console.log("✅ Category deleted and UI refreshed from DB");
+  } catch (err) {
+    console.error('❌ Failed to delete category:', err);
+    // Show specific FK error if it still happens
+    const msg = err instanceof Error ? err.message : `Failed to delete category "${label}".`;
+    if (msg.includes('foreign key')) {
+      showToast('Database blocked deletion due to linked items. Check Supabase constraints.', 'error');
+    } else {
+      showToast(msg, 'error');
     }
+  } finally {
+    setIsSaving(false);
+  }
 };
 
 
