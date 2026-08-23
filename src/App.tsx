@@ -11,7 +11,7 @@ import { getSupabaseClient } from './services/supabaseClient';
 const T = {
   milk: '#FDF8F1',
   paper: '#FFFDF9',
-  wine: '#FF4D00',
+  wine: '#A90E02',
   wineDeep: '#3D1F00',
   amber: '#E08A2B',
   ink: '#2B1A0E',
