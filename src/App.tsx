@@ -700,9 +700,9 @@ export default function App() {
   const chefRecommendations = useMemo(
     () =>
       activeDishes
-        .filter((d) => d.chefSpecial)
+        .filter((d) => d.chefSpecial && inCategory(d) && matchesQuery(d))
         .sort((a, b) => (a.display_order_chef || 0) - (b.display_order_chef || 0)),
-    [activeDishes]
+    [activeDishes, inCategory, matchesQuery]
   );
 
   const menuDishes = useMemo(
@@ -752,6 +752,17 @@ export default function App() {
     }
     document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  const scrollToSpecials = useCallback(() => {
+    const targets = ['todays-special', 'chef-choice', 'bestsellers', 'favorites', 'our-menu'];
+    for (const id of targets) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+    }
+  }, []);
 
   /* --------------------------- persistence ------------------------ */
   const handleUpdateDishes = async (updated: Dish[]) => {
@@ -907,6 +918,12 @@ export default function App() {
     padding: '52px 20px 0',
   };
 
+  const dishGridStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+    gap: 18,
+  };
+
   const cardStyle: React.CSSProperties = {
     background: T.paper,
     border: `1px solid ${T.line}`,
@@ -977,9 +994,29 @@ export default function App() {
                 fontWeight: 700,
               }}
             >
+              <li>
+                <a href="#menu" style={{ color: T.wine, textDecoration: 'none' }}>
+                  Menu
+                </a>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  id="nav-specials"
+                  onClick={scrollToSpecials}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    font: 'inherit',
+                    color: T.wine,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Specials
+                </button>
+              </li>
               {[
-                ['#menu', 'Menu'],
-                ['#specials', 'Specials'],
                 ['#about', 'About'],
                 ['#info', 'Info'],
                 ['#gallery', 'Gallery'],
@@ -1121,6 +1158,7 @@ export default function App() {
 
           {todaysSpecial && (
             <div
+              id="todays-special"
               role="button"
               tabIndex={0}
               onClick={() => setSelectedDish(todaysSpecial)}
@@ -1177,47 +1215,16 @@ export default function App() {
 
         {/* CHEF RECOMMENDATIONS */}
         {chefRecommendations.length > 0 && (
-          <section id="specials" style={sectionStyle}>
+          <section id="chef-choice" style={sectionStyle}>
             <SectionTitle lead="Chef" accent="Recommendations" />
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                gap: 18,
-              }}
-            >
-              {chefRecommendations.slice(0, 3).map((d) => (
-                <div
-                  key={`rec-${d.id}`}
-                  role="button"
-                  tabIndex={0}
+            <div style={dishGridStyle}>
+              {chefRecommendations.map((d) => (
+                <DishCard
+                  key={`chef-dish-${d.id}`}
+                  dish={d}
+                  idPrefix="chef"
                   onClick={() => setSelectedDish(d)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') setSelectedDish(d);
-                  }}
-                  style={{ ...cardStyle, cursor: 'pointer' }}
-                >
-                  <img
-                    src={d.image}
-                    alt={d.name}
-                    loading="lazy"
-                    style={{
-                      width: '100%',
-                      height: 170,
-                      objectFit: 'cover',
-                      borderRadius: 14,
-                      marginBottom: 12,
-                      display: 'block',
-                    }}
-                  />
-                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: T.ink }}>
-                    {d.name}
-                  </h3>
-                  <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, margin: '6px 0 0' }}>
-                    {d.description}
-                  </p>
-                  <p style={{ marginTop: 10, fontWeight: 800, color: T.wine }}>฿{d.priceTHB}</p>
-                </div>
+                />
               ))}
             </div>
           </section>
@@ -1261,15 +1268,9 @@ export default function App() {
         </section>
 
         {/* FULL MENU */}
-        <section style={{ ...sectionStyle, paddingTop: 34 }}>
+        <section id="our-menu" style={{ ...sectionStyle, paddingTop: 34 }}>
           <SectionTitle lead="Our" accent="Menu" />
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-              gap: 18,
-            }}
-          >
+          <div style={dishGridStyle}>
             {menuDishes.length > 0 ? (
               menuDishes.map((d) => (
                 <DishCard
@@ -1289,15 +1290,9 @@ export default function App() {
 
         {/* POPULAR */}
         {popularDishes.length > 0 && (
-          <section style={{ ...sectionStyle, paddingTop: 34 }}>
+          <section id="bestsellers" style={{ ...sectionStyle, paddingTop: 34 }}>
             <SectionTitle lead="Popular" accent="Dishes" />
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-                gap: 18,
-              }}
-            >
+            <div style={dishGridStyle}>
               {popularDishes.map((d) => (
                 <DishCard
                   key={`popular-dish-${d.id}`}
@@ -1312,15 +1307,9 @@ export default function App() {
 
         {/* CUSTOMER FAVOURITES */}
         {favoriteDishes.length > 0 && (
-          <section style={{ ...sectionStyle, paddingTop: 34 }}>
+          <section id="favorites" style={{ ...sectionStyle, paddingTop: 34 }}>
             <SectionTitle lead="Customer" accent="Favourites" />
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-                gap: 18,
-              }}
-            >
+            <div style={dishGridStyle}>
               {favoriteDishes.map((d) => (
                 <DishCard
                   key={`fav-dish-${d.id}`}
