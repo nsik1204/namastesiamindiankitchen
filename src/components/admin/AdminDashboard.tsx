@@ -768,20 +768,20 @@ export default function AdminDashboard({
           <span className="text-xl">🛠️</span>
           <div>
             <h1 className="font-bold text-gray-900 text-sm md:text-base tracking-tight">{restaurantInfo.name}</h1>
-            <p className="text-[10px] font-semibold text-orange-600 uppercase font-mono tracking-wider">Control Console • Super Admin Mode</p>
+            <p className="text-[10px] font-semibold text-red-800 uppercase font-mono tracking-wider">Control Console • Super Admin Mode</p>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
           {isSaving && (
-            <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded font-mono animate-pulse">
+            <span className="text-xs text-red-800 bg-orange-50 px-2 py-1 rounded font-mono animate-pulse">
               ⏱ Saving database state...
             </span>
           )}
           <button 
             type="button"
             onClick={onClose}
-            className="text-xs bg-orange-600 hover:bg-orange-700 text-white font-bold py-1.5 px-3 rounded-lg transition-colors shadow-sm"
+            className="text-xs bg-red-800 hover:bg-orange-700 text-white font-bold py-1.5 px-3 rounded-lg transition-colors shadow-sm"
           >
             ← Public Site
           </button>
@@ -805,7 +805,7 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('overview')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'overview' ? 'bg-orange-600 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'overview' ? 'bg-red-800 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
           >
             📊 Command Overview
           </button>
@@ -813,7 +813,7 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('dishes')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'dishes' ? 'bg-orange-600 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'dishes' ? 'bg-red-800 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
           >
             🍽️ Cuisine Catalog
           </button>
@@ -821,7 +821,7 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('categories')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'categories' ? 'bg-orange-600 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'categories' ? 'bg-red-800 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
           >
             🏷️ Menu Categories
           </button>
@@ -829,7 +829,7 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('restaurant')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'restaurant' ? 'bg-orange-600 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'restaurant' ? 'bg-red-800 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
           >
             📢 Brand Profile & Story
           </button>
@@ -837,7 +837,7 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('chat')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'chat' ? 'bg-orange-600 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'chat' ? 'bg-red-800 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
           >
             💬 WhatsApp & LINE Setup
           </button>
@@ -845,7 +845,7 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('gallery')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'gallery' ? 'bg-orange-600 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'gallery' ? 'bg-red-800 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
           >
             🖼️ Ambience Gallery
           </button>
@@ -884,7 +884,7 @@ export default function AdminDashboard({
 
                 <div className="bg-white p-5 rounded-2xl border border-orange-500/10 shadow-sm space-y-1">
                   <span className="text-xs text-[#7A5C3E] font-medium block">Today's Promotion</span>
-                  <div className="text-3xl font-extrabold text-orange-600 font-mono">
+                  <div className="text-3xl font-extrabold text-red-800 font-mono">
                     {stats.todaysSpecialsCount > 0 ? 'LIVE' : 'OFF'}
                   </div>
                   <span className="text-[10px] text-gray-600 block truncate">{stats.todaysSpecialsCount} items featured</span>
@@ -920,7 +920,7 @@ export default function AdminDashboard({
                         <tr key={dish.id} className="hover:bg-[#FFFDFB]">
                           <td className="py-2.5 px-3 font-semibold text-gray-800 truncate max-w-[170px]">
                             {dish.name}
-                            <span className="block text-[10px] text-orange-600/70 font-bold uppercase">{dish.category}</span>
+                            <span className="block text-[10px] text-red-800/70 font-bold uppercase">{dish.category}</span>
                           </td>
                           <td className="py-2.5 px-3 text-center">
                             <button
@@ -944,7 +944,7 @@ export default function AdminDashboard({
                             <button
                               type="button"
                               onClick={() => handleTogglePromoOnDish(dish.id, 'bestseller')}
-                              className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-transform ${dish.bestseller ? 'bg-orange-600 text-white font-black' : 'bg-gray-100 text-gray-400'}`}
+                              className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-transform ${dish.bestseller ? 'bg-red-800 text-white font-black' : 'bg-gray-100 text-gray-400'}`}
                             >
                               {dish.bestseller ? 'Active' : 'Enable'}
                             </button>
@@ -1239,7 +1239,7 @@ export default function AdminDashboard({
                   <div className="flex gap-2 pt-2">
                     <button
                       type="submit"
-                      className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-bold py-2.5 rounded-xl text-xs transition-colors shadow-sm"
+                      className="flex-1 bg-red-800 hover:bg-orange-700 text-white font-bold py-2.5 rounded-xl text-xs transition-colors shadow-sm"
                     >
                       {editingDish ? '🔒 Save Cuisines changes' : '✨ Post Cuisine'}
                     </button>
@@ -1282,7 +1282,7 @@ export default function AdminDashboard({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1.5">
                           <h4 className="font-extrabold text-xs text-gray-900 truncate">{dish.name}</h4>
-                          <span className="font-bold text-orange-600 text-xs font-mono shrink-0">฿{dish.priceTHB}</span>
+                          <span className="font-bold text-red-800 text-xs font-mono shrink-0">฿{dish.priceTHB}</span>
                         </div>
                         <p className="text-[11px] text-gray-500 line-clamp-2 mt-0.5">{dish.description}</p>
                         
@@ -1522,7 +1522,7 @@ export default function AdminDashboard({
                         <div className="flex justify-between items-start w-full">
                           <div>
                             <h4 className="font-bold text-xs text-gray-900">{cat.label}</h4>
-                            <span className="text-[10px] text-orange-600 block font-mono">ID: {cat.id}</span>
+                            <span className="text-[10px] text-red-800 block font-mono">ID: {cat.id}</span>
                             <span className="text-[10px] text-gray-400 block font-mono font-medium">{count} cuisines linked</span>
                             <div className="mt-1 flex items-center gap-1.5">
                               <span className="text-[10px] text-[#7A5C3E] font-bold font-mono">Order:</span>
@@ -1783,7 +1783,7 @@ export default function AdminDashboard({
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition-colors shadow-sm"
+                    className="bg-red-800 hover:bg-orange-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition-colors shadow-sm"
                   >
                     💾 Save Brand profile details
                   </button>
@@ -2057,7 +2057,7 @@ export default function AdminDashboard({
                   <div className="flex gap-2">
                     <button
                       type="submit"
-                      className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-bold py-2.5 rounded-xl text-xs transition-colors shadow-sm"
+                      className="flex-1 bg-red-800 hover:bg-orange-700 text-white font-bold py-2.5 rounded-xl text-xs transition-colors shadow-sm"
                     >
                       {editingGalleryIndex !== null ? '🔒 Replace Photo Asset' : '+ Append Photo Asset'}
                     </button>
@@ -2098,7 +2098,7 @@ export default function AdminDashboard({
                       
                       <div className="absolute inset-0 bg-black/75 opacity-100 sm:opacity-0 group-hover:opacity-100 flex flex-col justify-between p-3 transition-opacity duration-300">
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] bg-orange-600 text-white font-mono px-2 py-0.5 rounded-full font-bold">
+                          <span className="text-[10px] bg-red-800 text-white font-mono px-2 py-0.5 rounded-full font-bold">
                             {g.tall ? '📐 Tall layout' : '📐 Landscape'}
                           </span>
                           
@@ -2157,7 +2157,7 @@ export default function AdminDashboard({
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateGalleryActive(index, false, 'disabled')}
-                                  className="bg-orange-500 hover:bg-orange-600 text-white text-[8px] font-bold px-1 rounded transition-colors"
+                                  className="bg-orange-500 hover:bg-red-800 text-white text-[8px] font-bold px-1 rounded transition-colors"
                                   title="Disable photo"
                                 >
                                   Disable
