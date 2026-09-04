@@ -410,7 +410,7 @@ textarea {
   border: 1px solid rgba(201, 178, 143, 0.18);
   border-radius: clamp(1rem, 2vw, 1.35rem);
   background:
-    linear-gradient(145deg, rgba(255, 244, 220, 0.98), rgba(243, 231, 208, 0.94));
+    linear-gradient(145deg, rgba(255, 244, 220, 0.98), rgba(255, 244, 220, 0.98));
   color: var(--color-ink);
   padding: clamp(1rem, 2.2vw, 1.45rem);
   box-shadow:
