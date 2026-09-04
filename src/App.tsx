@@ -1372,32 +1372,29 @@ export default function App() {
         </section>
 
         {/* RESTAURANT INFO */}
-        <section id="info" style={sectionStyle}>
-          <SectionTitle lead="Restaurant" accent="Information" />
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: 18,
-            }}
-          >
-            {[
-              ['📍 Address', info.address],
-              ['📞 Phone', info.phone],
-              ['🕒 Opening Hours', info.openingHours],
-              ['📷 Instagram', info.instagram],
-              ['🌐 Website', info.website],
-              ['🍽️ Dining Style', info.diningStyle],
-            ].map(([title, value]) => (
-              <div key={title as string} style={cardStyle}>
-                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: T.wine }}>{title}</h3>
-                <p style={{ margin: '8px 0 0', fontSize: 13.5, color: T.muted, lineHeight: 1.7 }}>
-                  {value}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
+          <section id="info" style={sectionStyle}>
+            <SectionTitle lead="Restaurant" accent="Information" />
+
+            <div className="info-grid">
+              {[
+                ['📍 Address', info.address],
+                ['📞 Phone', info.phone],
+                ['🕒 Opening Hours', info.openingHours],
+                ['📷 Instagram', info.instagram],
+                ['🌐 Website', info.website],
+                ['🍽️ Dining Style', info.diningStyle],
+              ].map(([title, value]) => (
+                <div key={title as string} className="info-card">
+                  <h3>{title}</h3>
+
+                  <p>
+                    {value || 'Not available'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+
 
         {/* GALLERY */}
         {sortedGallery.length > 0 && (
