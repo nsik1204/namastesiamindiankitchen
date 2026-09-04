@@ -1134,7 +1134,7 @@ export default function App() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 22 }}>
               {[
                 '⭐ 4.8 Customer Rating',
-                '🍽️ 100+ Signature Dishes',
+                '🍽️ We Serve the best in taste',
                 '🌿 Fresh Ingredients',
                 '🏆 Chef Recommended',
               ].map((s) => (
