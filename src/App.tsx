@@ -1661,12 +1661,105 @@ export default function App() {
               }}
             >
               {selectedInfoType === 'about'
-                ? 'A premium culinary destination celebrating authentic flavours, fresh ingredients and chef-crafted experiences.'
+                ? `Namaste Siam Indian Kitchen
+
+            A premium culinary destination celebrating authentic Indian flavours, fresh ingredients and chef-crafted experiences.
+
+            Our menu brings together a variety of Indian favourites, including traditional curries, grilled specialities, vegetarian dishes, rice preparations, breads, snacks and accompaniments. We focus on rich flavours, quality ingredients and an inviting dining experience.
+
+            We believe great food should be authentic, flavourful and memorable. Our dishes are prepared with care and presented with a modern yet traditional touch.
+
+            Food Allergies & Dietary Requirements:
+            Please inform our staff before ordering if you have any food allergies, intolerances or dietary requirements. Our kitchen handles a variety of ingredients and allergens, so we cannot guarantee that any dish is completely free from cross-contact.
+
+            Menu items, ingredients, portion sizes and availability may change from time to time.
+
+            For reservations, enquiries or additional information, please contact us using the details provided on this website.`
                 : selectedInfoType === 'contact'
                 ? `📍 ${info.address}\n\n📞 ${info.phone}\n\n🕒 ${info.openingHours}`
                 : selectedInfoType === 'privacy'
-                ? 'We value your privacy and use information only to improve your browsing experience. No ordering or reservation data is collected on this site.'
-                : 'All menu items and prices are subject to availability and seasonal updates. This site is informational only.'}
+                ? `Privacy Policy
+
+            Last Updated: September 5, 2026
+
+            Namaste Siam Indian Kitchen respects your privacy.
+
+            Information Collection:
+            We may collect information that you voluntarily provide through contact forms, enquiries, reservations or other website features. We may also collect limited technical information such as browser type, device information, IP address and website usage data.
+
+            How We Use Information:
+            Information may be used to respond to enquiries, process requests, improve our website and services, maintain security and comply with applicable legal requirements.
+
+            Cookies:
+            This website may use cookies or similar technologies to improve functionality and understand website usage. You can control cookies through your browser settings.
+
+            Third-Party Services:
+            The website may contain links or integrations with third-party services such as maps, social media, analytics, reservation or payment providers. Those services have their own privacy policies and terms.
+
+            Data Sharing:
+            We do not sell personal information. Information may be shared with trusted service providers where reasonably necessary to operate the website or provide requested services, or where required by law.
+
+            Data Security:
+            We take reasonable measures to protect personal information, but no internet transmission or electronic storage system can be guaranteed to be completely secure.
+
+            Data Retention:
+            Information is retained only for as long as reasonably necessary for the purpose for which it was collected, to provide services, resolve disputes or meet legal obligations.
+
+            Your Rights:
+            Where applicable, you may request access, correction or deletion of your personal information. For privacy-related requests, please contact the restaurant using the contact details provided on this website.
+
+            Children:
+            We do not knowingly collect personal information from children where prohibited by applicable law.
+
+            Policy Updates:
+            This Privacy Policy may be updated from time to time. Any revised version will be published on this page.`
+                : `Terms & Conditions
+
+            Last Updated: September 5, 2026
+
+            By accessing or using the Namaste Siam Indian Kitchen website, you agree to these Terms & Conditions.
+
+            Website Use:
+            This website provides information about Namaste Siam Indian Kitchen, including menu items, food descriptions, restaurant information, promotions and contact details.
+
+            Menu Information:
+            We make reasonable efforts to keep menu information accurate. However, menu items, ingredients, prices, portion sizes and availability may change without prior notice. Food photographs are for illustrative purposes and actual presentation may vary.
+
+            Food Allergies:
+            Customers are responsible for informing restaurant staff about allergies, intolerances or dietary requirements before ordering. Although reasonable precautions may be taken, we cannot guarantee that any dish is completely free from allergens or cross-contact.
+
+            Reservations:
+            Submitting a reservation request through the website does not necessarily guarantee a confirmed reservation. A reservation is confirmed only when confirmation is provided by the restaurant or applicable booking provider.
+
+            Prices & Payments:
+            Displayed prices may change. Where online ordering or payment is provided through a third-party service, that transaction may also be subject to the third party's terms and policies.
+
+            Intellectual Property:
+            Website text, photographs, graphics, logos, branding, design and other content are owned by or licensed to Namaste Siam Indian Kitchen and may not be reproduced, distributed or commercially used without permission.
+
+            Acceptable Use:
+            You must not misuse the website, attempt unauthorised access, interfere with its functionality or security, introduce malicious software or use the website for unlawful purposes.
+
+            Third-Party Links:
+            The website may contain links to third-party services. Namaste Siam Indian Kitchen is not responsible for the content, availability, security or policies of external websites.
+
+            Website Availability:
+            We do not guarantee that the website will always be uninterrupted, error-free or available. We may modify, suspend or discontinue any part of the website at any time.
+
+            Disclaimer:
+            Website content is provided for general informational purposes. We do not guarantee that all information will always be complete, current or error-free.
+
+            Limitation of Liability:
+            To the maximum extent permitted by applicable law, Namaste Siam Indian Kitchen will not be liable for indirect, incidental or consequential losses arising from use of the website.
+
+            Changes:
+            These Terms may be updated from time to time. Updated terms will be published on this page.
+
+            Governing Law:
+            These Terms shall be governed by the applicable laws of the jurisdiction in which Namaste Siam Indian Kitchen operates.
+
+            Contact:
+            For questions regarding these Terms, please contact Namaste Siam Indian Kitchen using the contact details provided on this website.`}
             </p>
             <button
               type="button"
