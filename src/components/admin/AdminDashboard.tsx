@@ -746,7 +746,7 @@ export default function AdminDashboard({
   };
 
   return (
-    <div className="min-h-screen bg-[#FDF8F1] text-[#2B1A0E] font-body antialiased flex flex-col"> 
+    <div className="min-h-screen bg-[#FDF8F1] text-[#2B1A0E] font-body antialiased flex flex-col">
       
       {/* Toast Alert Banner */}
       {toast && (
