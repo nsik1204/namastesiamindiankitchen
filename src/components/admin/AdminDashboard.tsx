@@ -746,7 +746,7 @@ export default function AdminDashboard({
   };
 
   return (
-    <div className="min-h-screen bg-[#FFFDFB] text-[#1A0F00] font-sans antialiased flex flex-col">
+    <div className="min-h-screen bg-[#FDF8F1] text-[#2B1A0E] font-body antialiased flex flex-col"> 
       
       {/* Toast Alert Banner */}
       {toast && (
@@ -763,12 +763,12 @@ export default function AdminDashboard({
       )}
 
       {/* FIXED HEADER NAVBAR */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-orange-500/10 z-30 px-6 flex items-center justify-between shadow-sm">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-[rgba(253,248,241,0.86)] backdrop-blur-md border-b border-[rgba(122,74,34,0.16)] z-30 px-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-xl">🛠️</span>
           <div>
-            <h1 className="font-bold text-gray-900 text-sm md:text-base tracking-tight">{restaurantInfo.name}</h1>
-            <p className="text-[10px] font-semibold text-red-800 uppercase font-mono tracking-wider">Control Console • Super Admin Mode</p>
+            <h1 className="font-extrabold text-[#A90E02] text-[18px] tracking-[-0.01em]">{restaurantInfo.name}</h1>
+            <p className="text-[10px] font-extrabold text-[#E08A2B] uppercase tracking-[0.2em]">Control Console • Super Admin Mode</p>
           </div>
         </div>
         
@@ -781,14 +781,14 @@ export default function AdminDashboard({
           <button 
             type="button"
             onClick={onClose}
-            className="text-xs bg-red-800 hover:bg-orange-700 text-white font-bold py-1.5 px-3 rounded-lg transition-colors shadow-sm"
+            className="text-[13px] bg-[#A90E02] hover:bg-[#8A0B02] text-[#FFF4DC] font-extrabold py-1.5 px-4 rounded-full transition-colors"
           >
             ← Public Site
           </button>
           <button 
             type="button"
             onClick={logout}
-            className="text-xs text-gray-500 hover:text-red-600 font-semibold transition-colors px-2 py-1.5"
+            className="text-[12px] text-[#8C7358] hover:text-[#A90E02] font-bold transition-colors px-2 py-1.5"
           >
             Sign Out
           </button>
@@ -799,8 +799,8 @@ export default function AdminDashboard({
       <div className="flex-1 pt-16 flex flex-col md:flex-row">
         
         {/* Left Side Tab Navigator Panel */}
-        <aside className="w-full md:w-64 bg-white border-r border-orange-500/5 p-4 space-y-1 block md:sticky md:top-16 md:h-[calc(100vh-64px)] overflow-y-auto">
-          <div className="text-[11px] font-bold text-[#7A5C3E] uppercase tracking-widest px-3 py-2 mb-1 font-mono">Consoles</div>
+        <aside className="w-full md:w-64 bg-[#FFFDF9] border-r border-[rgba(122,74,34,0.16)] p-4 space-y-1 block md:sticky md:top-16 md:h-[calc(100vh-64px)] overflow-y-auto">
+          <div className="text-[10px] font-extrabold text-[#E08A2B] uppercase tracking-[0.2em] px-3 py-2 mb-1">Consoles</div>
           
           <button
             type="button"
