@@ -976,10 +976,10 @@ export default function AdminDashboard({
               VIEW B: CUISINE CATALOG MANAGEMENT
               ==================================================================== */}
           {activeTab === 'dishes' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-start">
               
               {/* CUISINE DISH FORM COMPILER PANEL (LEFT/TOP SIDE 5 COLS) */}
-              <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-orange-500/10 shadow-sm space-y-4">
+              <div className="lg:col-span-5 bg-white p-4 md:p-5 rounded-2xl border border-orange-500/10 shadow-sm space-y-4">
                 <div>
                   <h3 className="font-bold text-base text-[#1A0F00]">
                     {editingDish ? '📝 Edit Cuisine specs' : '✨ Cook New Entry'}
@@ -1257,7 +1257,7 @@ export default function AdminDashboard({
               </div>
 
               {/* CUISINE DISHS GRID LISTING PANEL (RIGHT SIDE 7 COLS) */}
-              <div className="lg:col-span-7 bg-white p-5 rounded-2xl border border-orange-500/10 shadow-sm flex flex-col h-[700px]">
+              <div className="lg:col-span-7 bg-white p-4 md:p-5 rounded-2xl border border-orange-500/10 shadow-sm flex flex-col min-h-[520px] h-[calc(100vh-220px)] max-h-[700px]">
                 <div className="flex items-center justify-between pb-4">
                   <div>
                     <h3 className="font-bold text-base">Menu Grid ({dishes.length})</h3>
@@ -2075,7 +2075,7 @@ export default function AdminDashboard({
               </div>
 
               {/* GALLERY IMAGES PREVIEW COLLAGE AND PURGER */}
-              <div className="lg:col-span-7 bg-white p-5 rounded-2xl border border-orange-500/10 shadow-sm flex flex-col h-[700px]">
+              <div className="lg:col-span-7 bg-white p-4 md:p-5 rounded-2xl border border-orange-500/10 shadow-sm flex flex-col min-h-[520px] h-[calc(100vh-220px)] max-h-[700px]">
                 <div>
                   <h3 className="font-bold text-base">Active Collage assets ({gallery.length})</h3>
                   <p className="text-xs text-gray-500">Preview collage elements currently being viewed in restaurant landing scene.</p>
