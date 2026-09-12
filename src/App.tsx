@@ -470,7 +470,7 @@ const EMPTY_RESTAURANT_INFO: RestaurantInfo = {
 
 const EMPTY_ABOUT_INFO: AboutInfo = { story: [], highlights: [] };
 
-const LOAD_TIMEOUT_MS = 12000;
+const LOAD_TIMEOUT_MS = 45000;
 
 function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
