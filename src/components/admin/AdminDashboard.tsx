@@ -1187,7 +1187,7 @@ export default function AdminDashboard({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">Diet Type</label>
                       <select
@@ -1195,8 +1195,8 @@ export default function AdminDashboard({
                         onChange={(e) => setDishForm({ ...dishForm, type: e.target.value as 'veg' | 'nonveg' })}
                         className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                       >
-                        <option value="veg">Veg</option>
-                        <option value="nonveg">Non-Veg</option>
+                        <option value="veg">🌱 Veg</option>
+                        <option value="nonveg">🍗 Non-Veg</option>
                       </select>
                     </div>
                     <div>
@@ -1205,20 +1205,21 @@ export default function AdminDashboard({
                         type="text"
                         value={dishForm.spiceLevel}
                         onChange={(e) => setDishForm({ ...dishForm, spiceLevel: e.target.value })}
-                        placeholder="Mild / Medium / Spicy"
+                        placeholder="e.g. Mild / Medium / Spicy"
                         className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">Sort Order</label>
-                      <input
-                        type="number"
-                        value={dishForm.display_order ?? 0}
-                        onChange={(e) => setDishForm({ ...dishForm, display_order: Number(e.target.value) })}
-                        placeholder="0"
-                        className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
-                      />
-                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">Menu Sort Order</label>
+                    <input
+                      type="number"
+                      value={dishForm.display_order ?? 0}
+                      onChange={(e) => setDishForm({ ...dishForm, display_order: Number(e.target.value) })}
+                      placeholder="0"
+                      className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
+                    />
                   </div>
 
                   {/* Food image upload controls */}
@@ -1377,53 +1378,30 @@ export default function AdminDashboard({
                     <span className="block text-xs font-bold text-[#B58C45] uppercase tracking-wider">Promotional Placements</span>
                     
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={dishForm.todaySpecial}
-                          onChange={(e) => setDishForm({ ...dishForm, todaySpecial: e.target.checked })}
-                          className="rounded border-[#B58C45]/40 text-[#173D32] focus:ring-0"
-                        />
-                        <span className="inline-flex items-center gap-1 font-semibold text-[#30251E]">
-                          <Sparkles className="w-3 h-3 text-[#D9B66D]" /> Special
-                        </span>
-                      </label>
-
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={dishForm.chefSpecial}
-                          onChange={(e) => setDishForm({ ...dishForm, chefSpecial: e.target.checked })}
-                          className="rounded border-[#B58C45]/40 text-[#173D32] focus:ring-0"
-                        />
-                        <span className="inline-flex items-center gap-1 font-semibold text-[#30251E]">
-                          <ChefHat className="w-3 h-3 text-[#173D32]" /> Chef's Choice
-                        </span>
-                      </label>
-
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={dishForm.bestseller}
-                          onChange={(e) => setDishForm({ ...dishForm, bestseller: e.target.checked })}
-                          className="rounded border-[#B58C45]/40 text-[#173D32] focus:ring-0"
-                        />
-                        <span className="inline-flex items-center gap-1 font-semibold text-[#30251E]">
-                          <Flame className="w-3 h-3 text-[#D9B66D]" /> Bestseller
-                        </span>
-                      </label>
-
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={dishForm.customerFavorite}
-                          onChange={(e) => setDishForm({ ...dishForm, customerFavorite: e.target.checked })}
-                          className="rounded border-[#B58C45]/40 text-[#173D32] focus:ring-0"
-                        />
-                        <span className="inline-flex items-center gap-1 font-semibold text-[#30251E]">
-                          <Heart className="w-3 h-3 text-[#173D32]" /> Favorite
-                        </span>
-                      </label>
+                      {[
+                        { key: 'todaySpecial', label: "Today's Special", icon: Sparkles },
+                        { key: 'chefSpecial', label: "Chef's Choice", icon: ChefHat },
+                        { key: 'bestseller', label: "Bestseller", icon: Flame },
+                        { key: 'customerFavorite', label: "Customer Favorite", icon: Heart },
+                      ].map((item) => {
+                        const isChecked = !!dishForm[item.key as keyof typeof dishForm];
+                        const Icon = item.icon;
+                        return (
+                          <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => setDishForm({ ...dishForm, [item.key]: !isChecked })}
+                            className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all text-left cursor-pointer ${
+                              isChecked
+                                ? 'bg-[#173D32] text-[#FFF9EF] border-[#173D32] shadow-xs'
+                                : 'bg-white text-[#75685A] border-[#E4D7BF] hover:bg-[#F8EEDB]'
+                            }`}
+                          >
+                            <Icon className={`w-3.5 h-3.5 shrink-0 ${isChecked ? 'text-[#D9B66D]' : 'text-[#75685A]'}`} />
+                            <span className="truncate">{item.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1501,172 +1479,153 @@ export default function AdminDashboard({
                   </div>
                 </div>
 
-                <div className="overflow-y-auto flex-1 space-y-3 pr-2 scrollbar-thin pt-3">
+                <div className="overflow-y-auto flex-1 space-y-3.5 pr-1.5 scrollbar-thin pt-3">
                   {dishes.map(dish => (
                     <div 
                       key={dish.id} 
-                      className={`flex gap-3 bg-white p-3.5 rounded-xl border transition-all ${
+                      className={`bg-white rounded-2xl border transition-all p-4 space-y-3 shadow-xs hover:shadow-md ${
                         editingDish?.id === dish.id 
-                          ? 'border-[#173D32] bg-[#173D32]/5 shadow-xs' 
-                          : 'border-[#E4D7BF] hover:border-[#E4D7BF]'
+                          ? 'border-[#173D32] ring-1 ring-[#173D32] bg-[#FFF9EF]' 
+                          : 'border-[#E4D7BF] hover:border-[#173D32]/40'
                       }`}
                     >
-                      <img 
-                        src={dish.image} 
-                        alt={dish.name} 
-                        className="w-16 h-16 object-cover rounded-xl flex-shrink-0 border border-[#E4D7BF] bg-[#F8EEDB]"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1000&q=80';
-                        }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <h4 className="font-display font-bold text-sm text-[#173D32] truncate">{dish.name}</h4>
-                          <span className="font-display font-bold text-[#173D32] text-sm shrink-0">฿{dish.priceTHB}</span>
-                        </div>
-                        <p className="text-xs text-[#75685A] line-clamp-2 mt-0.5">{dish.description}</p>
-                        
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          <span className="text-xs bg-[#F8EEDB] border border-[#E4D7BF] text-[#B58C45] px-2 py-0.5 rounded-md uppercase font-semibold">
-                            {dish.category}
-                          </span>
-                          <span className={`text-xs px-2 py-0.5 rounded-md font-semibold uppercase ${
-                            dish.type === 'veg' 
-                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                              : 'bg-rose-50 text-rose-800 border border-rose-200'
-                          }`}>
-                            {dish.type === 'veg' ? 'Veg' : 'Non-Veg'}
-                          </span>
-                          {dish.todaySpecial && (
-                            <span className="text-xs bg-[#D9B66D]/20 text-[#B58C45] border border-[#D9B66D]/40 px-2 py-0.5 rounded-md font-bold inline-flex items-center gap-1">
-                              <Sparkles className="w-3 h-3" /> Special
-                            </span>
-                          )}
-                          {dish.chefSpecial && (
-                            <span className="text-xs bg-[#173D32]/10 text-[#173D32] border border-[#173D32]/30 px-2 py-0.5 rounded-md font-bold inline-flex items-center gap-1">
-                              <ChefHat className="w-3 h-3" /> Chef
-                            </span>
-                          )}
-                          {dish.bestseller && (
-                            <span className="text-xs bg-[#9B4935]/15 text-[#9B4935] border border-[#9B4935]/30 px-2 py-0.5 rounded-md font-bold inline-flex items-center gap-1">
-                              <Flame className="w-3 h-3" /> Bestseller
-                            </span>
-                          )}
-                          {dish.customerFavorite && (
-                            <span className="text-xs bg-[#D9B66D]/20 text-[#B58C45] border border-[#D9B66D]/30 px-2 py-0.5 rounded-md font-bold inline-flex items-center gap-1">
-                              <Heart className="w-3 h-3" /> Favorite
-                            </span>
-                          )}
-                        </div>
+                      {/* Top Header Row: Thumbnail + Title + Price + Actions Toolbar */}
+                      <div className="flex items-start gap-3.5">
+                        <img 
+                          src={dish.image} 
+                          alt={dish.name} 
+                          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-xl flex-shrink-0 border border-[#E4D7BF] bg-[#F8EEDB] shadow-2xs"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1000&q=80';
+                          }}
+                        />
 
-                        {/* Order sorting controls */}
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 items-center mt-2.5 pt-2 border-t border-[#E4D7BF]">
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-[#75685A] font-semibold">Order:</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <h4 className="font-display font-bold text-base text-[#173D32] truncate leading-snug">{dish.name}</h4>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="font-display font-bold text-[#B58C45] text-sm">฿{dish.priceTHB}</span>
+                                <span className="text-[#E4D7BF]">•</span>
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-[#75685A]">{dish.category}</span>
+                              </div>
+                            </div>
+
+                            {/* Toolbar actions */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleEditDish(dish)}
+                                className="h-8 px-3 rounded-lg text-xs font-bold text-[#173D32] bg-[#F8EEDB] hover:bg-[#E4D7BF] border border-[#E4D7BF] transition-all flex items-center gap-1.5 cursor-pointer"
+                                title="Edit dish details"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleDisableDish(dish)}
+                                className={`h-8 px-2.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer ${
+                                  dish.active !== false
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                                    : 'bg-[#F8EEDB] text-[#75685A] border-[#E4D7BF] hover:bg-[#E4D7BF]'
+                                }`}
+                                title={dish.active !== false ? 'Click to hide dish' : 'Click to show dish'}
+                              >
+                                <span className={`w-2 h-2 rounded-full ${dish.active !== false ? 'bg-emerald-600' : 'bg-[#75685A]'}`} />
+                                <span>{dish.active !== false ? 'Active' : 'Hidden'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDish(dish.id, dish.name)}
+                                className="h-8 px-2.5 rounded-lg text-xs font-bold text-[#A33C32] hover:bg-[#A33C32]/10 border border-[#A33C32]/25 transition-all flex items-center gap-1 cursor-pointer"
+                                title="Delete dish"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Description */}
+                          <p className="text-xs text-[#75685A] line-clamp-2 mt-1.5 leading-relaxed">{dish.description}</p>
+                        </div>
+                      </div>
+
+                      {/* Badges Row */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span className={`text-[11px] px-2 py-0.5 rounded-md font-bold uppercase ${
+                          dish.type === 'veg' 
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                            : 'bg-rose-50 text-rose-800 border border-rose-200'
+                        }`}>
+                          {dish.type === 'veg' ? '🌱 Veg' : '🍗 Non-Veg'}
+                        </span>
+                        {dish.todaySpecial && (
+                          <span className="text-[11px] bg-[#D9B66D]/20 text-[#B58C45] border border-[#D9B66D]/40 px-2 py-0.5 rounded-md font-bold inline-flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" /> Special
+                          </span>
+                        )}
+                        {dish.chefSpecial && (
+                          <span className="text-[11px] bg-[#173D32]/10 text-[#173D32] border border-[#173D32]/30 px-2 py-0.5 rounded-md font-bold inline-flex items-center gap-1">
+                            <ChefHat className="w-3 h-3" /> Chef
+                          </span>
+                        )}
+                        {dish.bestseller && (
+                          <span className="text-[11px] bg-[#9B4935]/15 text-[#9B4935] border border-[#9B4935]/30 px-2 py-0.5 rounded-md font-bold inline-flex items-center gap-1">
+                            <Flame className="w-3 h-3" /> Bestseller
+                          </span>
+                        )}
+                        {dish.customerFavorite && (
+                          <span className="text-[11px] bg-[#D9B66D]/20 text-[#B58C45] border border-[#D9B66D]/30 px-2 py-0.5 rounded-md font-bold inline-flex items-center gap-1">
+                            <Heart className="w-3 h-3" /> Favorite
+                          </span>
+                        )}
+                        {dish.spiceLevel && (
+                          <span className="text-[11px] bg-[#F8EEDB] text-[#75685A] border border-[#E4D7BF] px-2 py-0.5 rounded-md font-medium">
+                            🌶️ {dish.spiceLevel}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Steppers & Metadata Row */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-[#E4D7BF]/70 text-xs text-[#75685A]">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-xs">Menu Order:</span>
                             <input
                               type="number"
                               value={dish.display_order ?? 0}
                               onChange={(e) => handleUpdateDishOrderField(dish.id, 'display_order', Number(e.target.value))}
-                              className="w-12 border border-[#E4D7BF] rounded-md px-1.5 py-0.5 text-xs text-center font-bold bg-white focus:outline-none focus:border-[#173D32]"
+                              className="w-12 h-6.5 border border-[#E4D7BF] rounded-md text-xs text-center font-bold bg-[#F8EEDB] text-[#30251E] focus:outline-none focus:border-[#173D32]"
                             />
                           </div>
 
                           {dish.todaySpecial && (
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs text-[#B58C45] font-semibold">Spec:</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-xs text-[#B58C45]">Spec:</span>
                               <input
                                 type="number"
                                 value={dish.display_order_today ?? 0}
                                 onChange={(e) => handleUpdateDishOrderField(dish.id, 'display_order_today', Number(e.target.value))}
-                                className="w-12 border border-[#E4D7BF] rounded-md px-1.5 py-0.5 text-xs text-center font-bold bg-white focus:outline-none focus:border-[#173D32]"
+                                className="w-12 h-6.5 border border-[#D9B66D]/50 rounded-md text-xs text-center font-bold bg-[#D9B66D]/10 text-[#B58C45] focus:outline-none focus:border-[#173D32]"
                               />
                             </div>
                           )}
 
                           {dish.chefSpecial && (
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs text-[#173D32] font-semibold">Chef:</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-xs text-[#173D32]">Chef:</span>
                               <input
                                 type="number"
                                 value={dish.display_order_chef ?? 0}
                                 onChange={(e) => handleUpdateDishOrderField(dish.id, 'display_order_chef', Number(e.target.value))}
-                                className="w-12 border border-[#E4D7BF] rounded-md px-1.5 py-0.5 text-xs text-center font-bold bg-white focus:outline-none focus:border-[#173D32]"
+                                className="w-12 h-6.5 border border-[#173D32]/40 rounded-md text-xs text-center font-bold bg-[#173D32]/10 text-[#173D32] focus:outline-none focus:border-[#173D32]"
                               />
                             </div>
                           )}
                         </div>
 
-                        {/* Status & Visibility Control Action Panel */}
-                        <div className="flex flex-wrap gap-2 items-center mt-2.5 pt-2 border-t border-[#E4D7BF]">
-                          <span className="text-xs text-[#75685A] font-semibold">Status:</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${
-                            dish.active !== false 
-                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                              : 'bg-rose-50 text-rose-800 border border-rose-200'
-                          }`}>
-                            {dish.active !== false ? 'Active' : 'Inactive'}
-                          </span>
-                          
-                          {dish.active !== false ? (
-                            <div className="flex gap-1.5 flex-wrap">
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateDishActive(dish.id, false, 'hidden')}
-                                className="bg-[#FFF9EF] hover:bg-amber-50 text-amber-800 text-xs font-semibold px-2 py-0.5 rounded-md border border-amber-200 transition-all"
-                                title="Hide this dish"
-                              >
-                                Hide
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateDishActive(dish.id, false, 'disabled')}
-                                className="bg-[#FFF9EF] hover:bg-rose-50 text-rose-800 text-xs font-semibold px-2 py-0.5 rounded-md border border-rose-200 transition-all"
-                                title="Disable this dish"
-                              >
-                                Disable
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-1.5 flex-wrap">
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateDishActive(dish.id, true, 'shown')}
-                                className="bg-[#FFF9EF] hover:bg-emerald-50 text-emerald-800 text-xs font-semibold px-2 py-0.5 rounded-md border border-emerald-200 transition-all"
-                                title="Show this dish"
-                              >
-                                Enable & Show
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col gap-1.5 justify-center shrink-0 pl-1">
-                        <button
-                          type="button"
-                          onClick={() => handleEditDish(dish)}
-                          className="bg-[#F8EEDB] hover:bg-[#F8EEDB] text-[#173D32] text-xs font-bold py-1.5 px-3 rounded-lg transition-colors border border-[#E4D7BF]"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleDisableDish(dish)}
-                          className={`text-xs font-bold py-1.5 px-3 rounded-lg transition-colors border ${
-                            dish.active 
-                              ? 'bg-[#F8EEDB] hover:bg-[#F8EEDB] text-[#75685A] border-[#E4D7BF]' 
-                              : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
-                          }`}
-                        >
-                          {dish.active ? 'Disable' : 'Enable'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteDish(dish.id, dish.name)}
-                          className="bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold py-1.5 px-3 rounded-lg transition-colors border border-rose-200"
-                        >
-                          Delete
-                        </button>
+                        <span className="text-[11px] font-mono text-[#75685A]/80">ID: {dish.id}</span>
                       </div>
                     </div>
                   ))}
@@ -1685,141 +1644,135 @@ export default function AdminDashboard({
           {activeTab === 'categories' && (
             <div className="space-y-6">
               
-              <div className="bg-[#FFF9EF] p-6 rounded-2xl border border-[#E4D7BF] shadow-[0_4px_16px_rgba(23,61,50,0.06)] space-y-4">
-                <div>
-                  <h3 className="font-display font-bold text-base text-[#173D32]">Add Menu Category</h3>
-                  <p className="text-xs text-[#75685A] mt-0.5">Define category tabs for sorting and filtering menu items on the public site.</p>
+              <div className="bg-[#FFF9EF] p-5 md:p-6 rounded-2xl border border-[#E4D7BF] shadow-[0_4px_16px_rgba(23,61,50,0.06)] space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#173D32]/10 flex items-center justify-center shrink-0">
+                    <Tag className="w-4 h-4 text-[#173D32]" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-base text-[#173D32]">Add Menu Category</h3>
+                    <p className="text-xs text-[#75685A] mt-0.5">Define category tabs for sorting and filtering menu items on the public site.</p>
+                  </div>
                 </div>
 
-                <form onSubmit={handleAddCategory} className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-semibold">
-                  <div>
-                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">Unique Code ID (Slug)</label>
+                <form onSubmit={handleAddCategory} className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end">
+                  <div className="md:col-span-5">
+                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">Unique Code ID (Slug)</label>
                     <input
                       type="text"
                       value={newCatId}
                       onChange={(e) => setNewCatId(e.target.value)}
                       placeholder="e.g. punjabi-special"
-                      className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
+                      className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">Display Label</label>
+                  <div className="md:col-span-5">
+                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">Display Label</label>
                     <input
                       type="text"
                       value={newCatLabel}
                       onChange={(e) => setNewCatLabel(e.target.value)}
                       placeholder="e.g. Punjabi Specials"
-                      className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
+                      className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                       required
                     />
                   </div>
-                  <div className="flex items-end">
+                  <div className="md:col-span-2">
                     <button
                       type="submit"
-                      className="w-full bg-[#173D32] hover:bg-[#102C25] text-[#FFF9EF] font-bold py-2.5 rounded-xl text-xs transition-colors shadow-xs"
+                      className="w-full h-10 bg-[#173D32] hover:bg-[#102C25] text-[#FFF9EF] font-bold py-2 px-3 rounded-xl text-xs transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      + Create Category
+                      <Plus className="w-4 h-4" />
+                      Create
                     </button>
                   </div>
                 </form>
               </div>
 
-              <div className="bg-[#FFF9EF] p-6 rounded-2xl border border-[#E4D7BF] shadow-[0_4px_16px_rgba(23,61,50,0.06)] space-y-4">
-                <div>
-                  <h3 className="font-display font-bold text-base text-[#173D32]">Active Category Tabs ({categories.length})</h3>
-                  <p className="text-xs text-[#75685A] mt-0.5">Manage, sort, and reorder categories displayed on the menu bar.</p>
+              <div className="bg-[#FFF9EF] p-5 md:p-6 rounded-2xl border border-[#E4D7BF] shadow-[0_4px_16px_rgba(23,61,50,0.06)] space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-display font-bold text-base text-[#173D32]">Active Category Tabs ({categories.length})</h3>
+                    <p className="text-xs text-[#75685A] mt-0.5">Manage, sort, and reorder categories displayed on the public navigation bar.</p>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
                   {categories.map(cat => {
                     const count = dishes.filter(d => d.category === cat.id).length;
+                    const isPrimary = cat.id === 'all';
                     return (
                       <div 
                         key={cat.id} 
-                        className="bg-white p-4 rounded-xl border border-[#E4D7BF] flex flex-col justify-between gap-3 hover:border-[#173D32]/30 transition-all shadow-xs"
+                        className="bg-white p-4 rounded-2xl border border-[#E4D7BF] flex flex-col justify-between gap-3 hover:border-[#173D32]/40 transition-all shadow-xs h-full min-h-[175px]"
                       >
-                        <div className="flex justify-between items-start w-full">
-                          <div>
-                            <h4 className="font-display font-bold text-sm text-[#173D32]">{cat.label}</h4>
-                            <span className="text-xs text-[#173D32] block font-semibold">ID: {cat.id}</span>
-                            <span className="text-xs text-[#75685A] block mt-0.5">{count} dishes linked</span>
-                            <div className="mt-2 flex items-center gap-1.5">
-                              <span className="text-xs text-[#75685A] font-semibold">Sort Order:</span>
-                              <input
-                                type="number"
-                                value={cat.display_order ?? 0}
-                                onChange={(e) => handleUpdateCategoryOrder(cat.id, Number(e.target.value))}
-                                className="w-12 border border-[#E4D7BF] rounded px-1.5 py-0.5 text-xs text-center font-bold bg-[#F8EEDB] focus:outline-none focus:border-[#173D32]"
-                              />
+                        {/* Top title and status badge */}
+                        <div>
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="min-w-0">
+                              <h4 className="font-display font-bold text-base text-[#173D32] leading-snug truncate">{cat.label}</h4>
+                              <span className="text-[11px] font-mono text-[#75685A] block mt-0.5">ID: {cat.id}</span>
                             </div>
-                          </div>
-
-                          <div className="flex flex-col gap-1.5 items-end shrink-0">
-                            {cat.id !== 'all' && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleDisableCategory(cat)}
-                                  className={`text-xs font-semibold py-1 px-2.5 rounded-lg transition-colors border ${
-                                    cat.active 
-                                      ? 'bg-[#F8EEDB] hover:bg-[#F8EEDB] text-[#75685A] border-[#E4D7BF]' 
-                                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
-                                  }`}
-                                >
-                                  {cat.active ? 'Disable' : 'Enable'}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteCategory(cat.id, cat.label)}
-                                  className="text-xs text-rose-700 hover:text-rose-900 font-semibold bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg px-2.5 py-1 transition-all"
-                                >
-                                  Delete
-                                </button>
-                              </>
-                            )}
-                            {cat.id === 'all' && (
-                              <span className="text-xs bg-[#F8EEDB] text-[#75685A] font-bold px-2 py-0.5 rounded-full">
-                                Primary
+                            {isPrimary ? (
+                              <span className="text-[11px] bg-[#D9B66D]/20 text-[#B58C45] border border-[#D9B66D]/40 font-bold px-2.5 py-0.5 rounded-full shrink-0">
+                                Primary Tab
+                              </span>
+                            ) : (
+                              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 border ${
+                                cat.active !== false
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  : 'bg-[#F8EEDB] text-[#75685A] border-[#E4D7BF]'
+                              }`}>
+                                {cat.active !== false ? 'Active' : 'Hidden'}
                               </span>
                             )}
                           </div>
+
+                          <div className="flex items-center gap-1.5 text-xs text-[#75685A] mt-2 font-medium">
+                            <UtensilsCrossed className="w-3.5 h-3.5 text-[#B58C45]" />
+                            <span>{count} dishes linked</span>
+                          </div>
                         </div>
 
-                        {/* Category Visibility Control Action Box */}
-                        <div className="mt-2 pt-2 border-t border-[#E4D7BF] flex flex-col gap-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-[#75685A] font-semibold">Status:</span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${
-                              cat.active !== false 
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                                : 'bg-rose-50 text-rose-800 border border-rose-200'
-                            }`}>
-                              {cat.active !== false ? 'Active' : 'Inactive'}
-                            </span>
-                          </div>
-                          
-                          {cat.id !== 'all' && (
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                              {cat.active !== false ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateCategoryActive(cat.id, false, 'hidden')}
-                                  className="bg-[#FFF9EF] hover:bg-amber-50 text-amber-800 text-xs font-semibold px-2 py-0.5 rounded-md border border-amber-200 transition-all"
-                                  title="Hide this category"
-                                >
-                                  Hide Tab
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateCategoryActive(cat.id, true, 'shown')}
-                                  className="bg-[#FFF9EF] hover:bg-emerald-50 text-emerald-800 text-xs font-semibold px-2 py-0.5 rounded-md border border-emerald-200 transition-all"
-                                  title="Show this category"
-                                >
-                                  Show Tab
-                                </button>
-                              )}
+                        {/* Middle sort order stepper */}
+                        <div className="flex items-center justify-between text-xs pt-2.5 border-t border-[#E4D7BF]/70">
+                          <span className="text-[#75685A] font-semibold">Sort Order:</span>
+                          <input
+                            type="number"
+                            value={cat.display_order ?? 0}
+                            onChange={(e) => handleUpdateCategoryOrder(cat.id, Number(e.target.value))}
+                            className="w-14 h-7 border border-[#E4D7BF] rounded-lg text-xs text-center font-bold bg-[#F8EEDB] text-[#30251E] focus:outline-none focus:border-[#173D32]"
+                          />
+                        </div>
+
+                        {/* Bottom Actions */}
+                        <div className="pt-2 border-t border-[#E4D7BF]/70">
+                          {isPrimary ? (
+                            <div className="text-[11px] text-[#75685A] italic py-1 text-center font-medium">
+                              ⭐ Core default category (Always shown)
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleDisableCategory(cat)}
+                                className={`flex-1 h-8 rounded-lg text-xs font-bold transition-all border flex items-center justify-center gap-1.5 cursor-pointer ${
+                                  cat.active !== false
+                                    ? 'bg-[#FFF9EF] hover:bg-[#F8EEDB] text-[#75685A] border-[#E4D7BF]'
+                                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
+                                }`}
+                              >
+                                {cat.active !== false ? 'Hide Tab' : 'Show Tab'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCategory(cat.id, cat.label)}
+                                className="h-8 px-3 text-xs font-bold text-[#A33C32] hover:bg-[#A33C32]/10 border border-[#A33C32]/25 rounded-lg transition-all cursor-pointer"
+                                title="Delete this custom category"
+                              >
+                                Delete
+                              </button>
                             </div>
                           )}
                         </div>
@@ -1836,7 +1789,7 @@ export default function AdminDashboard({
               VIEW D: RESTAURANT PROFILE & BRAND STORY STORYBOARD
               ==================================================================== */}
           {activeTab === 'restaurant' && (
-            <div className="bg-[#FFF9EF] p-6 rounded-2xl border border-[#E4D7BF] shadow-[0_4px_16px_rgba(23,61,50,0.06)] space-y-6">
+            <div className="bg-[#FFF9EF] p-5 md:p-6 rounded-2xl border border-[#E4D7BF] shadow-[0_4px_16px_rgba(23,61,50,0.06)] space-y-6">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-[#173D32]/10 flex items-center justify-center shrink-0">
                   <Store className="w-4 h-4 text-[#173D32]" />
@@ -1850,45 +1803,45 @@ export default function AdminDashboard({
               <form onSubmit={handleSaveProfileSubmit} className="space-y-4 text-xs font-semibold text-[#30251E]">
                 
                 <div>
-                  <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">Restaurant Name</label>
+                  <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">Restaurant Name</label>
                   <input
                     type="text"
                     value={profileForm.name}
                     onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                    className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
+                    className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">Postal Address</label>
+                  <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">Postal Address</label>
                   <input
                     type="text"
                     value={profileForm.address}
                     onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })}
-                    className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
+                    className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                     required
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">Business Phone Contact</label>
+                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">Business Phone Contact</label>
                     <input
                       type="text"
                       value={profileForm.phone}
                       onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                      className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
+                      className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">Opening Hours</label>
+                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">Opening Hours</label>
                     <input
                       type="text"
                       value={profileForm.openingHours}
                       onChange={(e) => setProfileForm({ ...profileForm, openingHours: e.target.value })}
-                      className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
+                      className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                       required
                     />
                   </div>
@@ -1896,30 +1849,30 @@ export default function AdminDashboard({
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">Instagram Handle</label>
+                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">Instagram Handle</label>
                     <input
                       type="text"
                       value={profileForm.instagram}
                       onChange={(e) => setProfileForm({ ...profileForm, instagram: e.target.value })}
-                      className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
+                      className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">Website URL</label>
+                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">Website URL</label>
                     <input
                       type="text"
                       value={profileForm.website}
                       onChange={(e) => setProfileForm({ ...profileForm, website: e.target.value })}
-                      className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
+                      className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">Dining Style</label>
+                    <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">Dining Style</label>
                     <input
                       type="text"
                       value={profileForm.diningStyle}
                       onChange={(e) => setProfileForm({ ...profileForm, diningStyle: e.target.value })}
-                      className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
+                      className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                     />
                   </div>
                 </div>
@@ -1931,11 +1884,11 @@ export default function AdminDashboard({
                   </h4>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">Story Paragraphs (One paragraph per line)</label>
+                      <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">Story Paragraphs (One paragraph per line)</label>
                       <textarea
                         value={storyInput}
                         onChange={(e) => setStoryInput(e.target.value)}
-                        className="w-full bg-white border border-[#E4D7BF] rounded-xl p-3 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] leading-relaxed"
+                        className="w-full bg-white border border-[#E4D7BF] rounded-xl p-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32] leading-relaxed"
                         rows={4}
                         placeholder="Type restaurant story here..."
                         required
@@ -1943,16 +1896,16 @@ export default function AdminDashboard({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">
+                      <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">
                         Brand Highlights ({aboutForm.highlights.length})
                       </label>
-                      <div className="flex gap-2 mb-2">
+                      <div className="flex gap-2 mb-2.5">
                         <input
                           type="text"
                           value={highlightInput}
                           onChange={(e) => setHighlightInput(e.target.value)}
                           placeholder="e.g. Sourced fresh from local growers"
-                          className="flex-1 bg-white border border-[#E4D7BF] rounded-xl p-2 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
+                          className="flex-1 h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault();
@@ -1963,7 +1916,7 @@ export default function AdminDashboard({
                         <button
                           type="button"
                           onClick={handleAddHighlight}
-                          className="bg-[#173D32] text-[#FFF9EF] px-4 font-bold text-xs rounded-xl hover:bg-[#102C25] transition-colors"
+                          className="h-10 px-4 bg-[#173D32] text-[#FFF9EF] font-bold text-xs rounded-xl hover:bg-[#102C25] transition-colors shrink-0 cursor-pointer"
                         >
                           Add bullet
                         </button>
@@ -1988,7 +1941,7 @@ export default function AdminDashboard({
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="bg-[#173D32] hover:bg-[#102C25] text-[#FFF9EF] font-bold py-2.5 px-6 rounded-xl text-xs transition-colors shadow-xs"
+                    className="h-11 px-6 bg-[#173D32] hover:bg-[#102C25] text-[#FFF9EF] font-bold rounded-xl text-xs transition-colors shadow-xs cursor-pointer"
                   >
                     Save Profile Details
                   </button>
@@ -2002,7 +1955,7 @@ export default function AdminDashboard({
               VIEW E: CHAT INTEGRATION GATEWAY
               ==================================================================== */}
           {activeTab === 'chat' && (
-            <div className="bg-[#FFF9EF] p-6 rounded-2xl border border-[#E4D7BF] shadow-[0_4px_16px_rgba(23,61,50,0.06)] space-y-6">
+            <div className="bg-[#FFF9EF] p-5 md:p-6 rounded-2xl border border-[#E4D7BF] shadow-[0_4px_16px_rgba(23,61,50,0.06)] space-y-6">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-[#173D32]/10 flex items-center justify-center shrink-0">
                   <MessageSquare className="w-4 h-4 text-[#173D32]" />
@@ -2038,91 +1991,91 @@ export default function AdminDashboard({
                           key={item.value}
                           type="button"
                           onClick={() => setChatForm({ ...chatForm, contactActiveChannel: item.value as any })}
-                          className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all cursor-pointer ${
+                          className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all cursor-pointer min-h-[95px] ${
                             active 
-                              ? 'bg-[#173D32]/10 border-[#173D32] text-[#173D32] shadow-xs font-bold ring-1 ring-[#173D32]' 
+                              ? 'bg-[#173D32] border-[#173D32] text-[#FFF9EF] shadow-md font-bold ring-2 ring-[#D9B66D]/50' 
                               : 'bg-white border-[#E4D7BF] text-[#75685A] hover:bg-[#F8EEDB] font-medium'
                           }`}
                         >
-                          <IconComp className="w-5 h-5 mb-1.5 shrink-0" />
-                          <span className="text-xs font-bold block">{item.label}</span>
-                          <span className="text-xs text-[#75685A] font-normal block mt-0.5 leading-tight">{item.desc}</span>
+                          <IconComp className={`w-5 h-5 mb-1.5 shrink-0 ${active ? 'text-[#D9B66D]' : 'text-[#75685A]'}`} />
+                          <span className={`text-xs font-bold block ${active ? 'text-[#FFF9EF]' : 'text-[#30251E]'}`}>{item.label}</span>
+                          <span className={`text-[11px] block mt-0.5 leading-tight ${active ? 'text-[#FFF9EF]/80' : 'text-[#75685A]'}`}>{item.desc}</span>
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
-                <div className="bg-emerald-50/40 p-5 rounded-2xl border border-emerald-200/60 space-y-4">
-                  <h4 className="text-emerald-900 font-bold text-xs flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                <div className="bg-[#FFF9EF] p-5 rounded-2xl border border-[#E4D7BF] space-y-4 shadow-xs">
+                  <h4 className="text-[#173D32] font-display font-bold text-sm flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#25D366]"></span>
                     WhatsApp Configuration
                   </h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-emerald-900 uppercase tracking-wider mb-1">WhatsApp Number</label>
+                      <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">WhatsApp Number</label>
                       <input
                         type="text"
                         value={chatForm.whatsappNumber}
                         onChange={(e) => setChatForm({ ...chatForm, whatsappNumber: e.target.value })}
                         placeholder="+66829560609"
-                        className="w-full bg-white border border-emerald-200 rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-emerald-600"
+                        className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                         disabled={chatForm.contactActiveChannel === 'line' || chatForm.contactActiveChannel === 'disabled'}
                       />
-                      <p className="text-xs text-[#75685A] font-normal mt-1">Include country code without special characters (e.g., 66829560609).</p>
+                      <p className="text-[11px] text-[#75685A] font-normal mt-1">Include country code without special characters (e.g., 66829560609).</p>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-emerald-900 uppercase tracking-wider mb-1">Default Pre-filled Message</label>
+                      <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">Default Pre-filled Message</label>
                       <input
                         type="text"
                         value={chatForm.whatsappMessage}
                         onChange={(e) => setChatForm({ ...chatForm, whatsappMessage: e.target.value })}
                         placeholder="Hello, I would like to book a table..."
-                        className="w-full bg-white border border-emerald-200 rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-emerald-600"
+                        className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                         disabled={chatForm.contactActiveChannel === 'line' || chatForm.contactActiveChannel === 'disabled'}
                       />
-                      <p className="text-xs text-[#75685A] font-normal mt-1">Pre-filled text in the customer's chat when tapping the button.</p>
+                      <p className="text-[11px] text-[#75685A] font-normal mt-1">Pre-filled text in the customer's chat when tapping the button.</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-emerald-50/20 p-5 rounded-2xl border border-emerald-200/50 space-y-4">
-                  <h4 className="text-emerald-900 font-bold text-xs flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                <div className="bg-[#FFF9EF] p-5 rounded-2xl border border-[#E4D7BF] space-y-4 shadow-xs">
+                  <h4 className="text-[#173D32] font-display font-bold text-sm flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#00B900]"></span>
                     LINE Configuration
                   </h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-emerald-900 uppercase tracking-wider mb-1">LINE ID</label>
+                      <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">LINE ID</label>
                       <input
                         type="text"
                         value={chatForm.lineId}
                         onChange={(e) => setChatForm({ ...chatForm, lineId: e.target.value })}
                         placeholder="namastesiam"
-                        className="w-full bg-white border border-emerald-200 rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-emerald-600"
+                        className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                         disabled={chatForm.contactActiveChannel === 'whatsapp' || chatForm.contactActiveChannel === 'disabled'}
                       />
-                      <p className="text-xs text-[#75685A] font-normal mt-1">Your official LINE handle or ID.</p>
+                      <p className="text-[11px] text-[#75685A] font-normal mt-1">Your official LINE handle or ID.</p>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-emerald-900 uppercase tracking-wider mb-1">LINE QR Code Image URL</label>
+                      <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">LINE QR Code Image URL</label>
                       <input
                         type="text"
                         value={chatForm.lineQrUrl}
                         onChange={(e) => setChatForm({ ...chatForm, lineQrUrl: e.target.value })}
                         placeholder="https://..."
-                        className="w-full bg-white border border-emerald-200 rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-emerald-600"
+                        className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                         disabled={chatForm.contactActiveChannel === 'whatsapp' || chatForm.contactActiveChannel === 'disabled'}
                       />
-                      <p className="text-xs text-[#75685A] font-normal mt-1">Direct URL to your LINE QR code asset.</p>
+                      <p className="text-[11px] text-[#75685A] font-normal mt-1">Direct URL to your LINE QR code asset.</p>
                     </div>
                   </div>
 
                   {chatForm.lineQrUrl && (chatForm.contactActiveChannel === 'line' || chatForm.contactActiveChannel === 'both') && (
-                    <div className="pt-2 flex items-center gap-3 bg-white p-3.5 rounded-xl border border-emerald-200/60 shadow-xs">
-                      <div className="p-1.5 border border-emerald-100 rounded-lg bg-white shrink-0">
+                    <div className="pt-2 flex items-center gap-3.5 bg-[#F8EEDB]/60 p-3.5 rounded-xl border border-[#E4D7BF] shadow-xs">
+                      <div className="p-1.5 border border-[#E4D7BF] rounded-lg bg-white shrink-0">
                         <img 
                           src={chatForm.lineQrUrl} 
                           alt="LINE QR code" 
@@ -2142,7 +2095,7 @@ export default function AdminDashboard({
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="bg-[#173D32] hover:bg-[#102C25] text-[#FFF9EF] font-bold py-2.5 px-6 rounded-xl text-xs transition-colors shadow-xs"
+                    className="h-11 px-6 bg-[#173D32] hover:bg-[#102C25] text-[#FFF9EF] font-bold rounded-xl text-xs transition-colors shadow-xs cursor-pointer"
                   >
                     Save Chat Settings
                   </button>
@@ -2367,50 +2320,64 @@ export default function AdminDashboard({
               </div>
 
               {/* GALLERY IMAGES PREVIEW COLLAGE AND PURGER */}
-              <div className="lg:col-span-7 bg-[#FFF9EF] p-5 rounded-2xl border border-[#E4D7BF] shadow-[0_4px_16px_rgba(23,61,50,0.06)] flex flex-col min-h-[520px] h-[calc(100vh-220px)] max-h-[700px]">
+              <div className="lg:col-span-7 bg-[#FFF9EF] p-5 md:p-6 rounded-2xl border border-[#E4D7BF] shadow-[0_4px_16px_rgba(23,61,50,0.06)] flex flex-col min-h-[520px] h-[calc(100vh-220px)] max-h-[700px]">
                 <div className="pb-3 border-b border-[#E4D7BF]">
                   <h3 className="font-display font-bold text-base text-[#173D32]">Gallery Assets ({gallery.length})</h3>
                   <p className="text-xs text-[#75685A] mt-0.5">Live photos featured in the public website ambience gallery section.</p>
                 </div>
 
-                <div className="overflow-y-auto flex-1 grid grid-cols-2 gap-3.5 mt-3 pr-1 scrollbar-thin">
+                <div className="overflow-y-auto flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 pr-1.5 scrollbar-thin">
                   {gallery.map((g, index) => (
                     <div 
                       key={index}
-                      className="group relative bg-[#F8EEDB] border border-[#E4D7BF] rounded-2xl overflow-hidden shadow-xs h-40"
+                      className="bg-white border border-[#E4D7BF] rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
                     >
-                      <img 
-                        src={g.image} 
-                        alt={g.alt} 
-                        className="w-full h-full object-cover" 
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1528605105345-5344ea20e269?auto=format&fit=crop&w=1200&q=80';
-                        }}
-                      />
-                      
-                      <div className="absolute inset-0 bg-black/75 opacity-100 sm:opacity-0 group-hover:opacity-100 flex flex-col justify-between p-3 transition-opacity duration-200">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs bg-[#173D32] text-white px-2.5 py-0.5 rounded-full font-bold">
-                            {g.tall ? 'Tall format' : 'Landscape'}
+                      <div className="relative aspect-[16/10] bg-[#F8EEDB] overflow-hidden">
+                        <img 
+                          src={g.image} 
+                          alt={g.alt} 
+                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105" 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1528605105345-5344ea20e269?auto=format&fit=crop&w=1200&q=80';
+                          }}
+                        />
+                        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                          <span className="text-[11px] bg-[#173D32]/90 backdrop-blur-xs text-[#FFF9EF] px-2.5 py-0.5 rounded-full font-bold shadow-xs">
+                            {g.tall ? 'Tall Bento' : 'Landscape (16:9)'}
                           </span>
-                          
-                          {/* Reorder control badges */}
-                          <div className="flex gap-1 items-center">
-                            <div className="flex gap-1 items-center mr-1">
-                              <span className="text-xs text-[#D9B66D] font-semibold">Sort:</span>
-                              <input
-                                type="number"
-                                value={g.display_order ?? 0}
-                                onChange={(e) => handleUpdateGalleryOrder(index, Number(e.target.value))}
-                                className="w-10 border border-white/30 rounded px-1 py-0.5 text-xs text-center font-bold bg-black/60 text-white focus:outline-none focus:border-[#D9B66D]"
-                              />
-                            </div>
+                        </div>
+                        <div className="absolute top-2.5 right-2.5">
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border shadow-xs ${
+                            g.active !== false 
+                              ? 'bg-emerald-600 text-white border-emerald-700' 
+                              : 'bg-[#75685A] text-white border-[#30251E]'
+                          }`}>
+                            {g.active !== false ? 'Active' : 'Hidden'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-white space-y-2 border-t border-[#E4D7BF]">
+                        <p className="text-xs font-semibold text-[#30251E] truncate" title={g.alt}>
+                          {g.alt || 'Ambience Photo'}
+                        </p>
+
+                        <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-[#E4D7BF]/60 text-xs">
+                          {/* Sort input & steppers */}
+                          <div className="flex items-center gap-1">
+                            <span className="text-[11px] font-semibold text-[#75685A]">Sort:</span>
+                            <input
+                              type="number"
+                              value={g.display_order ?? index}
+                              onChange={(e) => handleUpdateGalleryOrder(index, Number(e.target.value))}
+                              className="w-10 h-7 border border-[#E4D7BF] rounded-md text-xs text-center font-bold bg-[#F8EEDB] text-[#30251E] focus:outline-none focus:border-[#173D32]"
+                            />
                             <button
                               type="button"
                               onClick={() => moveGalleryItem(index, 'up')}
                               disabled={index === 0}
-                              className="bg-white/20 hover:bg-white text-white hover:text-[#30251E] p-1 rounded-md disabled:opacity-20 disabled:pointer-events-none transition-all"
-                              title="Move Up"
+                              className="p-1 rounded-md text-[#75685A] hover:bg-[#F8EEDB] hover:text-[#173D32] disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                              title="Move Left"
                             >
                               <ChevronLeft className="w-3.5 h-3.5" />
                             </button>
@@ -2418,67 +2385,60 @@ export default function AdminDashboard({
                               type="button"
                               onClick={() => moveGalleryItem(index, 'down')}
                               disabled={index === gallery.length - 1}
-                              className="bg-white/20 hover:bg-white text-white hover:text-[#30251E] p-1 rounded-md disabled:opacity-20 disabled:pointer-events-none transition-all"
-                              title="Move Down"
+                              className="p-1 rounded-md text-[#75685A] hover:bg-[#F8EEDB] hover:text-[#173D32] disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                              title="Move Right"
                             >
                               <ChevronRight className="w-3.5 h-3.5" />
                             </button>
                           </div>
-                        </div>
-                        
-                        <div className="space-y-1.5">
-                          <div className="text-xs text-white font-medium flex items-center justify-between">
-                            <span className="truncate max-w-[140px]">{g.alt || 'Ambience Photo'}</span>
-                            <span className={`shrink-0 ml-1.5 text-xs px-2 py-0.5 rounded-full font-bold uppercase ${
-                              g.active !== false ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
-                            }`}>
-                              {g.active !== false ? 'Active' : 'Inactive'}
-                            </span>
-                          </div>
-                          
-                          {/* Visibility controls */}
-                          <div className="flex gap-1.5">
-                            {g.active !== false ? (
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateGalleryActive(index, false, 'hidden')}
-                                className="bg-amber-400 hover:bg-amber-500 text-amber-950 text-xs font-bold px-2 py-0.5 rounded-md transition-colors"
-                                title="Hide photo"
-                              >
-                                Hide
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateGalleryActive(index, true, 'shown')}
-                                className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-2 py-0.5 rounded-md transition-colors"
-                                title="Show photo"
-                              >
-                                Show
-                              </button>
-                            )}
-                          </div>
 
-                          <div className="flex gap-1.5 pt-1">
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateGalleryActive(index, g.active === false, g.active === false ? 'shown' : 'hidden')}
+                              className={`h-7 px-2 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                                g.active !== false
+                                  ? 'bg-[#FFF9EF] hover:bg-[#F8EEDB] text-[#75685A] border-[#E4D7BF]'
+                                  : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                              }`}
+                              title={g.active !== false ? 'Hide from public site' : 'Show on public site'}
+                            >
+                              {g.active !== false ? 'Hide' : 'Show'}
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleEditGalleryItem(index)}
-                              className="flex-1 bg-white hover:bg-[#F8EEDB] text-[#30251E] text-xs font-bold py-1 rounded-lg transition-colors"
+                              className="h-7 px-2 bg-[#FFF9EF] hover:bg-[#F8EEDB] text-[#173D32] border border-[#E4D7BF] rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              title="Replace photo"
                             >
                               Replace
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteGalleryItem(index)}
-                              className="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-1 rounded-lg transition-colors"
+                              className="h-7 px-2 text-[#A33C32] hover:bg-[#A33C32]/10 border border-[#A33C32]/25 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              title="Delete photo"
                             >
-                              Delete
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
                       </div>
                     </div>
                   ))}
+
+                  {gallery.length < 2 && (
+                    <div className="border-2 border-dashed border-[#E4D7BF] rounded-2xl p-6 flex flex-col items-center justify-center text-center bg-[#F8EEDB]/30 min-h-[190px]">
+                      <div className="w-10 h-10 rounded-full bg-[#173D32]/10 flex items-center justify-center text-[#173D32] mb-2.5">
+                        <ImageIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold text-[#30251E] block">Add More Ambience Photos</span>
+                      <span className="text-[11px] text-[#75685A] max-w-xs mt-1 block leading-relaxed">
+                        Upload dining room, bar, and evening lighting photos to enrich your guest visual experience.
+                      </span>
+                    </div>
+                  )}
                   {gallery.length === 0 && (
                     <div className="col-span-2 py-20 text-center text-xs text-[#75685A] italic">No gallery photos added yet.</div>
                   )}
