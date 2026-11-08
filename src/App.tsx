@@ -217,33 +217,6 @@ function AdminGate(props: AdminGateProps) {
   if (isAdmin) {
     return (
       <div style={{ position: 'relative', zIndex: 10, minHeight: '100vh', background: T.milk }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 10,
-            padding: '12px 18px',
-            borderBottom: `1px solid ${T.line}`,
-            background: T.paper,
-          }}
-        >
-          <button
-            type="button"
-            onClick={handleSignOut}
-            style={{
-              border: `1px solid ${T.line}`,
-              background: 'transparent',
-              color: T.wine,
-              borderRadius: 10,
-              padding: '7px 14px',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            Sign out
-          </button>
-        </div>
         <AdminDashboard
           dishes={props.dishes}
           categories={props.categories}
@@ -256,6 +229,7 @@ function AdminGate(props: AdminGateProps) {
           onUpdateCategories={props.onUpdateCategories}
           onUpdateGallery={props.onUpdateGallery}
           onClose={props.onExit}
+          onLogout={handleSignOut}
         />
       </div>
     );
@@ -287,8 +261,8 @@ function AdminGate(props: AdminGateProps) {
       >
         <p
           style={{
-            fontSize: 10,
-            letterSpacing: '0.18em',
+            fontSize: 11,
+            letterSpacing: '0.14em',
             textTransform: 'uppercase',
             color: T.amber,
             fontWeight: 800,

@@ -15,6 +15,7 @@ interface AdminDashboardProps {
   onUpdateCategories: (updatedCategories: Category[]) => void;
   onUpdateGallery: (updatedGallery: GalleryItem[]) => void;
   onClose: () => void;
+  onLogout?: () => void;
 }
 
 export default function AdminDashboard({
@@ -28,7 +29,8 @@ export default function AdminDashboard({
   onUpdateAboutInfo,
   onUpdateCategories,
   onUpdateGallery,
-  onClose
+  onClose,
+  onLogout
 }: AdminDashboardProps) {
   const { logout } = useAdminAuth();
   
@@ -768,13 +770,13 @@ export default function AdminDashboard({
           <span className="text-xl">🛠️</span>
           <div>
             <h1 className="font-extrabold text-[#A90E02] text-[18px] tracking-[-0.01em]">{restaurantInfo.name}</h1>
-            <p className="text-[10px] font-extrabold text-[#E08A2B] uppercase tracking-[0.2em]">Control Console • Super Admin Mode</p>
+            <p className="text-[11px] font-bold text-[#9A580C] uppercase tracking-[0.14em]">Control Console • Super Admin Mode</p>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
           {isSaving && (
-            <span className="text-xs text-red-800 bg-orange-50 px-2 py-1 rounded font-mono animate-pulse">
+            <span className="text-xs text-[#A90E02] bg-[rgba(169,14,2,0.08)] border border-[rgba(169,14,2,0.2)] px-2.5 py-1 rounded font-mono animate-pulse">
               ⏱ Saving database state...
             </span>
           )}
@@ -787,8 +789,11 @@ export default function AdminDashboard({
           </button>
           <button 
             type="button"
-            onClick={logout}
-            className="text-[12px] text-[#8C7358] hover:text-[#A90E02] font-bold transition-colors px-2 py-1.5"
+            onClick={async () => {
+              await logout();
+              if (onLogout) onLogout();
+            }}
+            className="text-[12px] text-[#735B43] hover:text-[#A90E02] font-bold transition-colors px-2 py-1.5"
           >
             Sign Out
           </button>
@@ -799,13 +804,15 @@ export default function AdminDashboard({
       <div className="flex-1 pt-16 flex flex-col md:flex-row">
         
         {/* Left Side Tab Navigator Panel */}
-        <aside className="w-full md:w-64 bg-[#FFFDF9] border-r border-[rgba(122,74,34,0.16)] p-4 space-y-1 block md:sticky md:top-16 md:h-[calc(100vh-64px)] overflow-y-auto">
-          <div className="text-[10px] font-extrabold text-[#E08A2B] uppercase tracking-[0.2em] px-3 py-2 mb-1">Consoles</div>
+        <aside className="w-full md:w-64 bg-[#FFFDF9] border-r border-b md:border-b-0 border-[rgba(122,74,34,0.16)] p-3 md:p-4 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-y-auto md:sticky md:top-16 md:h-[calc(100vh-64px)] shrink-0">
+          <div className="text-[11px] font-bold text-[#9A580C] uppercase tracking-[0.14em] px-3 py-1 mb-0.5 hidden md:block">Consoles</div>
           
           <button
             type="button"
             onClick={() => setActiveTab('overview')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'overview' ? 'bg-red-800 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
+            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+              activeTab === 'overview' ? 'bg-[#A90E02] text-[#FFFDF9] shadow-sm font-bold' : 'text-[#2B1A0E] hover:bg-[rgba(224,138,43,0.08)] hover:text-[#A90E02]'
+            }`}
           >
             📊 Command Overview
           </button>
@@ -813,7 +820,9 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('dishes')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'dishes' ? 'bg-red-800 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
+            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+              activeTab === 'dishes' ? 'bg-[#A90E02] text-[#FFFDF9] shadow-sm font-bold' : 'text-[#2B1A0E] hover:bg-[rgba(224,138,43,0.08)] hover:text-[#A90E02]'
+            }`}
           >
             🍽️ Cuisine Catalog
           </button>
@@ -821,7 +830,9 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('categories')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'categories' ? 'bg-red-800 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
+            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+              activeTab === 'categories' ? 'bg-[#A90E02] text-[#FFFDF9] shadow-sm font-bold' : 'text-[#2B1A0E] hover:bg-[rgba(224,138,43,0.08)] hover:text-[#A90E02]'
+            }`}
           >
             🏷️ Menu Categories
           </button>
@@ -829,7 +840,9 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('restaurant')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'restaurant' ? 'bg-red-800 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
+            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+              activeTab === 'restaurant' ? 'bg-[#A90E02] text-[#FFFDF9] shadow-sm font-bold' : 'text-[#2B1A0E] hover:bg-[rgba(224,138,43,0.08)] hover:text-[#A90E02]'
+            }`}
           >
             📢 Brand Profile & Story
           </button>
@@ -837,7 +850,9 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('chat')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'chat' ? 'bg-red-800 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
+            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+              activeTab === 'chat' ? 'bg-[#A90E02] text-[#FFFDF9] shadow-sm font-bold' : 'text-[#2B1A0E] hover:bg-[rgba(224,138,43,0.08)] hover:text-[#A90E02]'
+            }`}
           >
             💬 WhatsApp & LINE Setup
           </button>
@@ -845,12 +860,14 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('gallery')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${activeTab === 'gallery' ? 'bg-red-800 text-white shadow-sm' : 'hover:bg-orange-50/40 text-gray-700'}`}
+            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+              activeTab === 'gallery' ? 'bg-[#A90E02] text-[#FFFDF9] shadow-sm font-bold' : 'text-[#2B1A0E] hover:bg-[rgba(224,138,43,0.08)] hover:text-[#A90E02]'
+            }`}
           >
             🖼️ Ambience Gallery
           </button>
 
-          <div className="border-t border-gray-100 my-4 pt-4 px-3">
+          <div className="border-t border-gray-100 my-4 pt-4 px-3 hidden md:block">
             <div className="bg-[#FFF8F0] p-3 rounded-lg border border-orange-500/10 space-y-1">
               <span className="text-[10px] font-bold text-orange-800 uppercase tracking-widest font-mono">Live Session</span>
               <span className="block text-[11px] text-[#7A5C3E] truncate">Role: Administrator</span>
