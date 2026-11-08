@@ -1399,7 +1399,6 @@ export default function App() {
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 22 }}>
               {[
-                t('badgeRating'),
                 t('badgeFlavours'),
                 t('badgeFresh'),
                 t('badgeChef'),

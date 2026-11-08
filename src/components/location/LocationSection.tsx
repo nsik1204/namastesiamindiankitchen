@@ -8,7 +8,6 @@ import {
   Navigation,
   Copy,
   Check,
-  Star,
   ExternalLink,
   Utensils
 } from 'lucide-react';
@@ -72,7 +71,7 @@ export default function LocationSection({ info }: LocationSectionProps) {
         {/* Left Card: Verified Details, Actions & Hours (7 Cols) */}
         <div className="lg:col-span-7 bg-[#FFF9EF] border border-[#E4D7BF] rounded-3xl p-6 md:p-8 shadow-[0_14px_40px_rgba(48,37,30,0.07)] flex flex-col justify-between space-y-6">
           
-          {/* Header Status & Social Proof */}
+          {/* Header Status: Live Operating Hours */}
           <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#E4D7BF]">
             <div className="flex items-center gap-2">
               <span className="relative flex h-3 w-3">
@@ -94,11 +93,6 @@ export default function LocationSection({ info }: LocationSectionProps) {
               >
                 {isCurrentlyOpen ? t('openNow') : t('closedNow')} • {t('operatingHoursToday')}
               </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 bg-[#F8EEDB] px-3 py-1 rounded-full border border-[#E4D7BF] text-[#75685A] text-xs font-bold">
-              <Star className="w-3.5 h-3.5 fill-[#B58C45] text-[#B58C45]" />
-              <span>{t('socialProofRating')}</span>
             </div>
           </div>
 
