@@ -119,11 +119,11 @@ interface AdminGateProps {
   restaurantInfo: RestaurantInfo;
   aboutInfo: AboutInfo;
   gallery: GalleryItem[];
-  onUpdateDishes: (d: Dish[]) => void;
-  onUpdateCategories: (c: Category[]) => void;
-  onUpdateRestaurantInfo: (r: RestaurantInfo) => void;
-  onUpdateAboutInfo: (a: AboutInfo) => void;
-  onUpdateGallery: (g: GalleryItem[]) => void;
+  onUpdateDishes: (d: Dish[]) => Promise<void> | void;
+  onUpdateCategories: (c: Category[]) => Promise<void> | void;
+  onUpdateRestaurantInfo: (r: RestaurantInfo) => Promise<void> | void;
+  onUpdateAboutInfo: (a: AboutInfo) => Promise<void> | void;
+  onUpdateGallery: (g: GalleryItem[]) => Promise<void> | void;
   onExit: () => void;
 }
 

@@ -46,11 +46,11 @@ interface AdminDashboardProps {
   restaurantInfo: RestaurantInfo;
   aboutInfo: AboutInfo;
   gallery: GalleryItem[];
-  onUpdateDishes: (updatedDishes: Dish[]) => void;
-  onUpdateRestaurantInfo: (updatedInfo: RestaurantInfo) => void;
-  onUpdateAboutInfo: (updatedAbout: AboutInfo) => void;
-  onUpdateCategories: (updatedCategories: Category[]) => void;
-  onUpdateGallery: (updatedGallery: GalleryItem[]) => void;
+  onUpdateDishes: (updatedDishes: Dish[]) => Promise<void> | void;
+  onUpdateRestaurantInfo: (updatedInfo: RestaurantInfo) => Promise<void> | void;
+  onUpdateAboutInfo: (updatedAbout: AboutInfo) => Promise<void> | void;
+  onUpdateCategories: (updatedCategories: Category[]) => Promise<void> | void;
+  onUpdateGallery: (updatedGallery: GalleryItem[]) => Promise<void> | void;
   onClose: () => void;
   onLogout?: () => void;
 }
@@ -645,25 +645,39 @@ export default function AdminDashboard({
   const [aboutForm, setAboutForm] = useState<AboutInfo>({ ...aboutInfo });
   const [storyInput, setStoryInput] = useState<string>(aboutInfo.story.join('\n'));
   const [highlightInput, setHighlightInput] = useState<string>('');
+  const [isProfileDirty, setIsProfileDirty] = useState<boolean>(false);
+
+  useEffect(() => {
+    setProfileForm({ ...restaurantInfo });
+    setAboutForm({ ...aboutInfo });
+    setStoryInput(aboutInfo.story.join('\n'));
+    setIsProfileDirty(false);
+  }, [restaurantInfo, aboutInfo]);
 
   const handleSaveProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    await new Promise(r => setTimeout(r, 600));
 
-    const parsedStory = storyInput
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
+    try {
+      const parsedStory = storyInput
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
 
-    onUpdateRestaurantInfo({ ...profileForm });
-    onUpdateAboutInfo({
-      story: parsedStory,
-      highlights: aboutForm.highlights
-    });
+      await onUpdateRestaurantInfo({ ...profileForm });
+      await onUpdateAboutInfo({
+        story: parsedStory,
+        highlights: aboutForm.highlights
+      });
 
-    setIsSaving(false);
-    showToast('Restaurant details and story saved successfully!');
+      setIsProfileDirty(false);
+      showToast('Restaurant details and story saved successfully!');
+    } catch (err: any) {
+      console.error('Failed to save profile details:', err);
+      showToast(err?.message || 'Failed to save profile details. Please try again.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleAddHighlight = () => {
@@ -677,6 +691,7 @@ export default function AdminDashboard({
         highlights: [...aboutForm.highlights, highlightInput.trim()]
       });
       setHighlightInput('');
+      setIsProfileDirty(true);
     }
   };
 
@@ -685,6 +700,7 @@ export default function AdminDashboard({
       ...aboutForm,
       highlights: aboutForm.highlights.filter((_, i) => i !== index)
     });
+    setIsProfileDirty(true);
   };
 
   // ==========================================
@@ -701,19 +717,22 @@ export default function AdminDashboard({
   const handleSaveChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    await new Promise(r => setTimeout(r, 500));
-
-    onUpdateRestaurantInfo({
-      ...restaurantInfo,
-      whatsappNumber: chatForm.whatsappNumber,
-      whatsappMessage: chatForm.whatsappMessage,
-      lineId: chatForm.lineId,
-      lineQrUrl: chatForm.lineQrUrl,
-      contactActiveChannel: chatForm.contactActiveChannel
-    });
-
-    setIsSaving(false);
-    showToast('WhatsApp & LINE settings saved successfully!');
+    try {
+      await onUpdateRestaurantInfo({
+        ...restaurantInfo,
+        whatsappNumber: chatForm.whatsappNumber,
+        whatsappMessage: chatForm.whatsappMessage,
+        lineId: chatForm.lineId,
+        lineQrUrl: chatForm.lineQrUrl,
+        contactActiveChannel: chatForm.contactActiveChannel
+      });
+      showToast('WhatsApp & LINE settings saved successfully!');
+    } catch (err: any) {
+      console.error('Failed to save chat settings:', err);
+      showToast(err?.message || 'Failed to save chat settings.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // ==========================================
@@ -1807,7 +1826,10 @@ export default function AdminDashboard({
                   <input
                     type="text"
                     value={profileForm.name}
-                    onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                    onChange={(e) => {
+                      setProfileForm({ ...profileForm, name: e.target.value });
+                      setIsProfileDirty(true);
+                    }}
                     className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                     required
                   />
@@ -1818,7 +1840,10 @@ export default function AdminDashboard({
                   <input
                     type="text"
                     value={profileForm.address}
-                    onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })}
+                    onChange={(e) => {
+                      setProfileForm({ ...profileForm, address: e.target.value });
+                      setIsProfileDirty(true);
+                    }}
                     className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                     required
                   />
@@ -1830,7 +1855,10 @@ export default function AdminDashboard({
                     <input
                       type="text"
                       value={profileForm.phone}
-                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                      onChange={(e) => {
+                        setProfileForm({ ...profileForm, phone: e.target.value });
+                        setIsProfileDirty(true);
+                      }}
                       className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                       required
                     />
@@ -1840,7 +1868,10 @@ export default function AdminDashboard({
                     <input
                       type="text"
                       value={profileForm.openingHours}
-                      onChange={(e) => setProfileForm({ ...profileForm, openingHours: e.target.value })}
+                      onChange={(e) => {
+                        setProfileForm({ ...profileForm, openingHours: e.target.value });
+                        setIsProfileDirty(true);
+                      }}
                       className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                       required
                     />
@@ -1853,7 +1884,10 @@ export default function AdminDashboard({
                     <input
                       type="text"
                       value={profileForm.instagram}
-                      onChange={(e) => setProfileForm({ ...profileForm, instagram: e.target.value })}
+                      onChange={(e) => {
+                        setProfileForm({ ...profileForm, instagram: e.target.value });
+                        setIsProfileDirty(true);
+                      }}
                       className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                     />
                   </div>
@@ -1862,7 +1896,10 @@ export default function AdminDashboard({
                     <input
                       type="text"
                       value={profileForm.website}
-                      onChange={(e) => setProfileForm({ ...profileForm, website: e.target.value })}
+                      onChange={(e) => {
+                        setProfileForm({ ...profileForm, website: e.target.value });
+                        setIsProfileDirty(true);
+                      }}
                       className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                     />
                   </div>
@@ -1871,7 +1908,10 @@ export default function AdminDashboard({
                     <input
                       type="text"
                       value={profileForm.diningStyle}
-                      onChange={(e) => setProfileForm({ ...profileForm, diningStyle: e.target.value })}
+                      onChange={(e) => {
+                        setProfileForm({ ...profileForm, diningStyle: e.target.value });
+                        setIsProfileDirty(true);
+                      }}
                       className="w-full h-10 bg-white border border-[#E4D7BF] rounded-xl px-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32]"
                     />
                   </div>
@@ -1887,7 +1927,10 @@ export default function AdminDashboard({
                       <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">Story Paragraphs (One paragraph per line)</label>
                       <textarea
                         value={storyInput}
-                        onChange={(e) => setStoryInput(e.target.value)}
+                        onChange={(e) => {
+                          setStoryInput(e.target.value);
+                          setIsProfileDirty(true);
+                        }}
                         className="w-full bg-white border border-[#E4D7BF] rounded-xl p-3.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32] focus:ring-1 focus:ring-[#173D32] leading-relaxed"
                         rows={4}
                         placeholder="Type restaurant story here..."
@@ -1934,17 +1977,38 @@ export default function AdminDashboard({
                           </span>
                         ))}
                       </div>
+
+                      {isProfileDirty && (
+                        <div className="flex items-center gap-2 text-xs text-[#8A5200] bg-[#FFF3D6] border border-[#E4D7BF] px-3.5 py-2 rounded-xl font-medium mt-3">
+                          <span>⚠️ <strong>Unsaved Changes:</strong> Please click <strong>"Save Profile Details"</strong> below to publish updates live to the website.</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-2 flex items-center gap-3">
                   <button
                     type="submit"
-                    className="h-11 px-6 bg-[#173D32] hover:bg-[#102C25] text-[#FFF9EF] font-bold rounded-xl text-xs transition-colors shadow-xs cursor-pointer"
+                    disabled={isSaving}
+                    className={`h-11 px-6 font-bold rounded-xl text-xs transition-all shadow-xs cursor-pointer flex items-center gap-2 ${
+                      isProfileDirty
+                        ? 'bg-[#173D32] hover:bg-[#102C25] text-[#D9B66D] ring-2 ring-[#D9B66D]'
+                        : 'bg-[#173D32] hover:bg-[#102C25] text-[#FFF9EF]'
+                    }`}
                   >
-                    Save Profile Details
+                    {isSaving ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-[#D9B66D] border-t-transparent rounded-full animate-spin" />
+                        Saving Profile...
+                      </>
+                    ) : (
+                      'Save Profile Details'
+                    )}
                   </button>
+                  {isProfileDirty && (
+                    <span className="text-xs text-[#B26A00] font-semibold animate-pulse">● Unsaved edits</span>
+                  )}
                 </div>
 
               </form>

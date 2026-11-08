@@ -113,9 +113,11 @@ function mapGalleryToRow(item: GalleryItem, idx: number): any {
 export const MenuService = {
   async getRestaurantInfo(): Promise<RestaurantInfo> {
     const supabase = requireClient();
-    const { data: infoList, error: infoError } = await supabase.from('restaurant_info').select('*').limit(1);
+    const [{ data: infoList, error: infoError }, { data: chatList, error: chatError }] = await Promise.all([
+      supabase.from('restaurant_info').select('*').order('updated_at', { ascending: false }).limit(1),
+      supabase.from('chat_settings').select('*').order('updated_at', { ascending: false }).limit(1),
+    ]);
     if (infoError) fail('read restaurant_info', infoError);
-    const { data: chatList, error: chatError } = await supabase.from('chat_settings').select('*').limit(1);
     if (chatError) fail('read chat_settings', chatError);
     const infoRow = infoList?.[0];
     if (!infoRow) throw new Error('No row found in restaurant_info.');
@@ -133,34 +135,55 @@ export const MenuService = {
 
   async saveRestaurantInfo(info: RestaurantInfo): Promise<void> {
     const supabase = requireClient();
-    const { data: existingInfo, error: readInfoErr } = await supabase.from('restaurant_info').select('id').limit(1);
+    const { data: existingInfo, error: readInfoErr } = await supabase
+      .from('restaurant_info')
+      .select('id')
+      .order('updated_at', { ascending: false })
+      .limit(1);
     if (readInfoErr) fail('read restaurant_info', readInfoErr);
-    const infoRow: any = {
+    const infoPayload = {
       name: info.name, address: info.address, phone: info.phone,
       opening_hours: info.openingHours, instagram: info.instagram,
       website: info.website, dining_style: info.diningStyle,
       updated_at: new Date().toISOString()
     };
-    if (existingInfo?.[0]?.id) infoRow.id = existingInfo[0].id;
-    const { error: infoErr } = await supabase.from('restaurant_info').upsert(infoRow);
-    if (infoErr) fail('save restaurant_info', infoErr);
-    const { data: existingChat, error: readChatErr } = await supabase.from('chat_settings').select('id').limit(1);
+    if (existingInfo && existingInfo.length > 0 && existingInfo[0]?.id) {
+      const { error: infoErr } = await supabase.from('restaurant_info').update(infoPayload).eq('id', existingInfo[0].id);
+      if (infoErr) fail('update restaurant_info', infoErr);
+    } else {
+      const { error: infoErr } = await supabase.from('restaurant_info').insert(infoPayload);
+      if (infoErr) fail('insert restaurant_info', infoErr);
+    }
+
+    const { data: existingChat, error: readChatErr } = await supabase
+      .from('chat_settings')
+      .select('id')
+      .order('updated_at', { ascending: false })
+      .limit(1);
     if (readChatErr) fail('read chat_settings', readChatErr);
-    const chatRow: any = {
+    const chatPayload = {
       whatsapp_number: info.whatsappNumber || '',
       whatsapp_default_message: info.whatsappMessage || '',
       line_id: info.lineId || '', line_qr_url: info.lineQrUrl || '',
       contact_active_channel: info.contactActiveChannel || 'both',
       updated_at: new Date().toISOString()
     };
-    if (existingChat?.[0]?.id) chatRow.id = existingChat[0].id;
-    const { error: chatErr } = await supabase.from('chat_settings').upsert(chatRow);
-    if (chatErr) fail('save chat_settings', chatErr);
+    if (existingChat && existingChat.length > 0 && existingChat[0]?.id) {
+      const { error: chatErr } = await supabase.from('chat_settings').update(chatPayload).eq('id', existingChat[0].id);
+      if (chatErr) fail('update chat_settings', chatErr);
+    } else {
+      const { error: chatErr } = await supabase.from('chat_settings').insert(chatPayload);
+      if (chatErr) fail('insert chat_settings', chatErr);
+    }
   },
 
   async getAboutInfo(): Promise<AboutInfo> {
     const supabase = requireClient();
-    const { data, error } = await supabase.from('about_info').select('*').limit(1);
+    const { data, error } = await supabase
+      .from('about_info')
+      .select('*')
+      .order('updated_at', { ascending: false })
+      .limit(1);
     if (error) fail('read about_info', error);
     const row = data?.[0];
     if (!row) throw new Error('No row found in about_info.');
@@ -169,16 +192,24 @@ export const MenuService = {
 
   async saveAboutInfo(about: AboutInfo): Promise<void> {
     const supabase = requireClient();
-    const { data: existing, error: readErr } = await supabase.from('about_info').select('id').limit(1);
+    const { data: existing, error: readErr } = await supabase
+      .from('about_info')
+      .select('id')
+      .order('updated_at', { ascending: false })
+      .limit(1);
     if (readErr) fail('read about_info', readErr);
-    const row: any = {
+    const rowPayload = {
       story_paragraphs: about.story || [],
       highlights: about.highlights || [],
       updated_at: new Date().toISOString()
     };
-    if (existing?.[0]?.id) row.id = existing[0].id;
-    const { error } = await supabase.from('about_info').upsert(row);
-    if (error) fail('save about_info', error);
+    if (existing && existing.length > 0 && existing[0]?.id) {
+      const { error } = await supabase.from('about_info').update(rowPayload).eq('id', existing[0].id);
+      if (error) fail('update about_info', error);
+    } else {
+      const { error } = await supabase.from('about_info').insert(rowPayload);
+      if (error) fail('insert about_info', error);
+    }
   },
 
   async getCategories(): Promise<Category[]> {
