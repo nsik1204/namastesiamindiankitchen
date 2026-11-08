@@ -284,7 +284,7 @@ function AdminGate(props: AdminGateProps) {
         >
           Restricted Area
         </p>
-        <h1 style={{ margin: '8px 0 4px', fontSize: 24, color: T.ink, fontWeight: 800 }}>
+        <h1 style={{ margin: '8px 0 4px', fontSize: 24, color: T.ink, fontWeight: 800, fontFamily: 'var(--font-display)' }}>
           Administrator sign in
         </h1>
         <p style={{ margin: '0 0 20px', fontSize: 12, color: T.muted, lineHeight: 1.6 }}>
