@@ -96,14 +96,14 @@ export default function DishCard({ dish, onClick, idPrefix, onAddToCart, cartQua
                 e.stopPropagation();
                 onAddToCart(dish, e);
               }}
-              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs ${
+              className={`h-7 px-2.5 rounded-full text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1 shrink-0 whitespace-nowrap cursor-pointer ${
                 cartQuantity > 0
                   ? 'bg-[#173D32] text-[#FFF9EF] hover:bg-[#102C25] border border-[#D9B66D]'
                   : 'bg-[#FFF9EF] text-[#173D32] border border-[#E4D7BF] hover:bg-[#173D32] hover:text-[#FFF9EF] hover:border-[#173D32]'
               }`}
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{cartQuantity > 0 ? `${cartQuantity}` : t('addToOrder')}</span>
+              <Plus className="w-3.5 h-3.5 shrink-0 stroke-[2.5]" />
+              <span className="leading-none">{cartQuantity > 0 ? `${cartQuantity}` : t('quickAdd')}</span>
             </button>
           )}
         </div>
