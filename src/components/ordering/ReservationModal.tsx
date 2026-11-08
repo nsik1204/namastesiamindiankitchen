@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RestaurantInfo } from '../../types';
-import { Calendar, Clock, Users, X, Send, CheckCircle2, MessageSquare } from 'lucide-react';
+import { Calendar, Clock, Users, X, Send, MessageSquare, AlertCircle } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface ReservationModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface ReservationModalProps {
 }
 
 export default function ReservationModal({ isOpen, onClose, restaurantInfo }: ReservationModalProps) {
+  const { language, t } = useLanguage();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [date, setDate] = useState(() => {
@@ -19,32 +21,91 @@ export default function ReservationModal({ isOpen, onClose, restaurantInfo }: Re
   const [guests, setGuests] = useState('2');
   const [seatingArea, setSeatingArea] = useState<'indoor' | 'outdoor' | 'any'>('any');
   const [specialRequest, setSpecialRequest] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const handleSubmit = (platform: 'whatsapp' | 'line') => {
+    setValidationError(null);
+
+    // 1. Name validation
     if (!name.trim()) {
-      alert('Please enter your name for the reservation.');
-      return;
-    }
-    if (!phone.trim()) {
-      alert('Please enter your contact phone or WhatsApp number.');
+      const err = t('valNameRequired');
+      setValidationError(err);
       return;
     }
 
-    const message = `*Table Reservation Request — ${restaurantInfo.name || 'Namaste Siam'}* 🍷
+    // 2. Phone validation
+    if (!phone.trim()) {
+      const err = t('valPhoneRequired');
+      setValidationError(err);
+      return;
+    }
+
+    const digits = phone.replace(/[^0-9]/g, '');
+    if (digits.length < 8) {
+      const err = t('valPhoneInvalid');
+      setValidationError(err);
+      return;
+    }
+
+    // 3. Past date validation
+    try {
+      const selected = new Date(date + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (selected < today) {
+        const err = t('valDatePast');
+        setValidationError(err);
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    // Generate bilingual reservation message
+    let message = '';
+    if (language === 'th') {
+      const seatingAreaTH =
+        seatingArea === 'indoor'
+          ? 'ห้องแอร์ (ในร้าน)'
+          : seatingArea === 'outdoor'
+          ? 'ระเบียงด้านนอก'
+          : 'ที่นั่งว่างใดก็ได้';
+
+      message = `*คำขอจองโต๊ะอาหาร — ${restaurantInfo.name || 'Namaste Siam'}* 🍷
+---------------------------------
+👤 *ชื่อผู้จอง:* ${name.trim()}
+📞 *เบอร์โทร/WhatsApp:* ${phone.trim()}
+📅 *วันที่:* ${date}
+⏰ *เวลา:* ${time}
+👥 *จำนวนแขก:* ${guests} ท่าน
+🪑 *โซนที่นั่ง:* ${seatingAreaTH}
+${specialRequest.trim() ? `📝 *ข้อกำหนดพิเศษ:* ${specialRequest.trim()}\n` : ''}---------------------------------
+_ส่งผ่านระบบเมนูดิจิทัล Namaste Siam_`;
+    } else {
+      const seatingAreaEN =
+        seatingArea === 'indoor'
+          ? 'Indoor Air-conditioned'
+          : seatingArea === 'outdoor'
+          ? 'Outdoor Terrace'
+          : 'Any Available';
+
+      message = `*Table Reservation Request — ${restaurantInfo.name || 'Namaste Siam'}* 🍷
 ---------------------------------
 👤 *Guest Name:* ${name.trim()}
 📞 *Phone/WhatsApp:* ${phone.trim()}
 📅 *Date:* ${date}
 ⏰ *Time:* ${time}
 👥 *Number of Guests:* ${guests} People
-🪑 *Seating Preference:* ${seatingArea === 'indoor' ? 'Indoor Air-conditioned' : seatingArea === 'outdoor' ? 'Outdoor Terrace' : 'Any Available'}
+🪑 *Seating Preference:* ${seatingAreaEN}
 ${specialRequest.trim() ? `📝 *Special Request:* ${specialRequest.trim()}\n` : ''}---------------------------------
 _Sent via Namaste Siam Digital Menu_`;
+    }
 
     if (platform === 'whatsapp') {
-      const waNumber = (restaurantInfo.whatsappNumber || '+66829560609').replace(/[^0-9]/g, '');
+      const rawNumber = restaurantInfo.whatsappNumber || '+66829560609';
+      const waNumber = rawNumber.replace(/[^0-9]/g, '');
       const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank', 'noopener,noreferrer');
     } else {
@@ -60,7 +121,7 @@ _Sent via Namaste Siam Digital Menu_`;
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Table Reservation"
+      aria-label={t('resModalTitle')}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -72,46 +133,64 @@ _Sent via Namaste Siam Digital Menu_`;
         <div className="flex items-start justify-between">
           <div>
             <span className="text-xs font-bold text-[#8C5E2D] uppercase tracking-wider block">
-              Experience Authentic Dining
+              {t('resModalSubtitle')}
             </span>
             <h2 className="text-2xl font-extrabold text-[#2B1A0E] tracking-tight font-display mt-0.5">
-              Reserve a Table
+              {t('resModalTitle')}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-[#FDF8F1] border border-[rgba(122,74,34,0.16)] flex items-center justify-center text-[#735B43] hover:text-[#A90E02] transition-colors"
+            aria-label={t('close')}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Validation Error Alert Box */}
+        {validationError && (
+          <div
+            role="alert"
+            className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in"
+          >
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{validationError}</span>
+          </div>
+        )}
 
         {/* Reservation Form */}
         <div className="space-y-4 text-xs font-semibold">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             <div>
               <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1">
-                Full Name *
+                {t('fullNameLabel')}
               </label>
               <input
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Rahul Sharma"
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (validationError) setValidationError(null);
+                }}
+                placeholder={t('fullNamePlaceholder')}
                 className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2.5 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
                 required
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1">
-                Contact Phone / WhatsApp *
+                {t('phoneLabel')}
               </label>
               <input
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+66 82 956 0609"
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  if (validationError) setValidationError(null);
+                }}
+                placeholder={t('phonePlaceholder')}
                 className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2.5 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
                 required
               />
@@ -121,29 +200,32 @@ _Sent via Namaste Siam Digital Menu_`;
           <div className="grid grid-cols-3 gap-2.5">
             <div>
               <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-[#A90E02]" /> Date
+                <Calendar className="w-3.5 h-3.5 text-[#A90E02]" /> {t('dateLabel')}
               </label>
               <input
                 type="date"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  if (validationError) setValidationError(null);
+                }}
                 className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-[#A90E02]" /> Time
+                <Clock className="w-3.5 h-3.5 text-[#A90E02]" /> {t('timeLabel')}
               </label>
               <select
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
               >
-                <option value="12:00">12:00 PM (Lunch)</option>
+                <option value="12:00">12:00 PM</option>
                 <option value="12:30">12:30 PM</option>
                 <option value="13:00">1:00 PM</option>
                 <option value="13:30">1:30 PM</option>
-                <option value="18:00">6:00 PM (Dinner)</option>
+                <option value="18:00">6:00 PM</option>
                 <option value="18:30">6:30 PM</option>
                 <option value="19:00">7:00 PM</option>
                 <option value="19:30">7:30 PM</option>
@@ -154,35 +236,35 @@ _Sent via Namaste Siam Digital Menu_`;
             </div>
             <div>
               <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1 flex items-center gap-1">
-                <Users className="w-3.5 h-3.5 text-[#A90E02]" /> Guests
+                <Users className="w-3.5 h-3.5 text-[#A90E02]" /> {t('guestsLabel')}
               </label>
               <select
                 value={guests}
                 onChange={(e) => setGuests(e.target.value)}
                 className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
               >
-                <option value="1">1 Person</option>
-                <option value="2">2 People</option>
-                <option value="3">3 People</option>
-                <option value="4">4 People</option>
-                <option value="5">5 People</option>
-                <option value="6">6 People</option>
-                <option value="7">7 People</option>
-                <option value="8">8 People</option>
-                <option value="10+">10+ Group</option>
+                <option value="1">{language === 'th' ? '1 ท่าน' : '1 Person'}</option>
+                <option value="2">{language === 'th' ? '2 ท่าน' : '2 People'}</option>
+                <option value="3">{language === 'th' ? '3 ท่าน' : '3 People'}</option>
+                <option value="4">{language === 'th' ? '4 ท่าน' : '4 People'}</option>
+                <option value="5">{language === 'th' ? '5 ท่าน' : '5 People'}</option>
+                <option value="6">{language === 'th' ? '6 ท่าน' : '6 People'}</option>
+                <option value="7">{language === 'th' ? '7 ท่าน' : '7 People'}</option>
+                <option value="8">{language === 'th' ? '8 ท่าน' : '8 People'}</option>
+                <option value="10+">{language === 'th' ? '10+ ท่าน (กลุ่มใหญ่)' : '10+ Group'}</option>
               </select>
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1.5">
-              Seating Preference
+              {t('seatingLabel')}
             </label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'any', label: 'Any Available' },
-                { id: 'indoor', label: 'Air-Conditioned' },
-                { id: 'outdoor', label: 'Outdoor Terrace' },
+                { id: 'any', label: t('seatAny') },
+                { id: 'indoor', label: t('seatIndoor') },
+                { id: 'outdoor', label: t('seatOutdoor') },
               ].map((seat) => (
                 <button
                   key={seat.id}
@@ -202,12 +284,12 @@ _Sent via Namaste Siam Digital Menu_`;
 
           <div>
             <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1">
-              Special Notes / Occasion (Optional)
+              {t('specialNotesLabel')}
             </label>
             <textarea
               value={specialRequest}
               onChange={(e) => setSpecialRequest(e.target.value)}
-              placeholder="e.g. Anniversary dinner, high chair needed for infant, etc."
+              placeholder={t('specialNotesPlaceholder')}
               rows={2}
               className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2.5 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
             />
@@ -217,7 +299,7 @@ _Sent via Namaste Siam Digital Menu_`;
         {/* Action Buttons */}
         <div className="space-y-2 pt-2 border-t border-[rgba(122,74,34,0.12)]">
           <span className="block text-[11px] text-center text-[#8C7358]">
-            Instant confirmation will be sent directly to your phone.
+            {t('resConfirmNote')}
           </span>
           <div className="flex gap-2">
             <button
@@ -226,7 +308,7 @@ _Sent via Namaste Siam Digital Menu_`;
               className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition-colors"
             >
               <MessageSquare className="w-4 h-4" />
-              Book via WhatsApp
+              {t('bookWhatsApp')}
             </button>
             <button
               type="button"
@@ -234,7 +316,7 @@ _Sent via Namaste Siam Digital Menu_`;
               className="flex-1 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition-colors"
             >
               <Send className="w-4 h-4" />
-              Book via LINE
+              {t('bookLine')}
             </button>
           </div>
         </div>
@@ -243,4 +325,3 @@ _Sent via Namaste Siam Digital Menu_`;
     </div>
   );
 }
-
