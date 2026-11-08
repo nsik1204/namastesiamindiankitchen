@@ -4,6 +4,9 @@ import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from './types'
 import DishCard from './components/DishCard';
 import AdminDashboard from './components/admin/AdminDashboard';
 import { getSupabaseClient } from './services/supabaseClient';
+import OrderDrawer, { CartItem } from './components/ordering/OrderDrawer';
+import ReservationModal from './components/ordering/ReservationModal';
+import FloatingCartPill from './components/ordering/FloatingCartPill';
 
 /* ------------------------------------------------------------------ */
 /* Warm-paper / tandoor palette (from workspace UI reference)          */
@@ -636,6 +639,74 @@ export default function App() {
     useState<'about' | 'contact' | 'privacy' | 'terms' | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  /* ---------------------- Module 1: Cart & Orders ----------------- */
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('nsik_order_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isOrderDrawerOpen, setIsOrderDrawerOpen] = useState(false);
+  const [isReservationOpen, setIsReservationOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nsik_order_cart', JSON.stringify(cart));
+    } catch (e) {
+      console.error('Failed to save cart to localStorage', e);
+    }
+  }, [cart]);
+
+  const handleAddToCart = useCallback((dish: Dish) => {
+    setCart((prev) => {
+      const existingIndex = prev.findIndex((item) => item.dish.id === dish.id);
+      if (existingIndex >= 0) {
+        const copy = [...prev];
+        copy[existingIndex] = {
+          ...copy[existingIndex],
+          quantity: copy[existingIndex].quantity + 1,
+        };
+        return copy;
+      }
+      return [...prev, { dish, quantity: 1 }];
+    });
+  }, []);
+
+  const handleUpdateCartQuantity = useCallback((dishId: number, delta: number) => {
+    setCart((prev) =>
+      prev
+        .map((item) => {
+          if (item.dish.id === dishId) {
+            const newQty = item.quantity + delta;
+            return newQty > 0 ? { ...item, quantity: newQty } : null;
+          }
+          return item;
+        })
+        .filter((item): item is CartItem => item !== null)
+    );
+  }, []);
+
+  const handleRemoveFromCart = useCallback((dishId: number) => {
+    setCart((prev) => prev.filter((item) => item.dish.id !== dishId));
+  }, []);
+
+  const handleClearCart = useCallback(() => {
+    setCart([]);
+  }, []);
+
+  const getCartQuantity = useCallback(
+    (dishId: number) => cart.find((item) => item.dish.id === dishId)?.quantity || 0,
+    [cart]
+  );
+
+  const totalCartCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
+  const totalCartTHB = useMemo(
+    () => cart.reduce((sum, item) => sum + item.dish.priceTHB * item.quantity, 0),
+    [cart]
+  );
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -995,6 +1066,56 @@ export default function App() {
                 </li>
               ))}
             </ul>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {totalCartCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsOrderDrawerOpen(true)}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: 999,
+                    border: `1px solid ${T.line}`,
+                    background: T.paper,
+                    color: T.wine,
+                    fontSize: 12.5,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                  aria-label={`Open order tray with ${totalCartCount} items`}
+                >
+                  <span>🛒</span>
+                  <span>{totalCartCount}</span>
+                  <span style={{ color: T.amber }}>฿{totalCartTHB}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setIsReservationOpen(true)}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 999,
+                  border: `1px solid ${T.wine}`,
+                  background: T.wine,
+                  color: T.milk,
+                  fontSize: 12.5,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  boxShadow: '0 4px 12px rgba(169,14,2,0.18)',
+                  transition: 'transform 0.15s ease',
+                }}
+              >
+                <span>📅</span>
+                <span>Reserve Table</span>
+              </button>
+            </div>
           </nav>
         </header>
 
@@ -1159,8 +1280,33 @@ export default function App() {
                 >
                   {todaysSpecial.description}
                 </p>
-                <div style={{ fontSize: 18, fontWeight: 800, color: T.wine }}>
-                  ฿{todaysSpecial.priceTHB}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 12 }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: T.wine }}>
+                    ฿{todaysSpecial.priceTHB}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToCart(todaysSpecial);
+                    }}
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: 999,
+                      border: `1px solid ${T.wine}`,
+                      background: T.wine,
+                      color: T.paper,
+                      fontSize: 12,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      boxShadow: '0 4px 10px rgba(169,14,2,0.18)',
+                    }}
+                  >
+                    + Add to Order {getCartQuantity(todaysSpecial.id) > 0 && `(${getCartQuantity(todaysSpecial.id)})`}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1178,6 +1324,8 @@ export default function App() {
                   dish={d}
                   idPrefix="chef"
                   onClick={() => setSelectedDish(d)}
+                  onAddToCart={handleAddToCart}
+                  cartQuantity={getCartQuantity(d.id)}
                 />
               ))}
             </div>
@@ -1232,6 +1380,8 @@ export default function App() {
                   dish={d}
                   idPrefix="dish"
                   onClick={() => setSelectedDish(d)}
+                  onAddToCart={handleAddToCart}
+                  cartQuantity={getCartQuantity(d.id)}
                 />
               ))
             ) : (
@@ -1253,6 +1403,8 @@ export default function App() {
                   dish={d}
                   idPrefix="pop"
                   onClick={() => setSelectedDish(d)}
+                  onAddToCart={handleAddToCart}
+                  cartQuantity={getCartQuantity(d.id)}
                 />
               ))}
             </div>
@@ -1270,6 +1422,8 @@ export default function App() {
                   dish={d}
                   idPrefix="fav"
                   onClick={() => setSelectedDish(d)}
+                  onAddToCart={handleAddToCart}
+                  cartQuantity={getCartQuantity(d.id)}
                 />
               ))}
             </div>
@@ -1602,22 +1756,45 @@ export default function App() {
                   {selectedDish.ingredients.join(', ')}
                 </p>
               )}
-              <button
-                type="button"
-                onClick={() => setSelectedDish(null)}
-                style={{
-                  marginTop: 22,
-                  padding: '11px 20px',
-                  borderRadius: 999,
-                  border: `1px solid ${T.line}`,
-                  background: 'transparent',
-                  color: T.wine,
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                }}
-              >
-                Close
-              </button>
+              <div style={{ display: 'flex', gap: 10, marginTop: 22, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleAddToCart(selectedDish);
+                  }}
+                  style={{
+                    padding: '11px 20px',
+                    borderRadius: 999,
+                    border: 'none',
+                    background: T.wine,
+                    color: T.paper,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: '0 4px 12px rgba(169,14,2,0.22)',
+                  }}
+                >
+                  <span>+ Add to Order Tray</span>
+                  {getCartQuantity(selectedDish.id) > 0 && ` (${getCartQuantity(selectedDish.id)})`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDish(null)}
+                  style={{
+                    padding: '11px 20px',
+                    borderRadius: 999,
+                    border: `1px solid ${T.line}`,
+                    background: 'transparent',
+                    color: T.wine,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1791,6 +1968,31 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* FLOATING CART PILL */}
+      <FloatingCartPill
+        totalCount={totalCartCount}
+        totalTHB={totalCartTHB}
+        onClick={() => setIsOrderDrawerOpen(true)}
+      />
+
+      {/* ORDER DRAWER */}
+      <OrderDrawer
+        isOpen={isOrderDrawerOpen}
+        onClose={() => setIsOrderDrawerOpen(false)}
+        cart={cart}
+        onUpdateQuantity={handleUpdateCartQuantity}
+        onRemoveItem={handleRemoveFromCart}
+        onClearCart={handleClearCart}
+        restaurantInfo={info}
+      />
+
+      {/* TABLE RESERVATION MODAL */}
+      <ReservationModal
+        isOpen={isReservationOpen}
+        onClose={() => setIsReservationOpen(false)}
+        restaurantInfo={info}
+      />
     </div>
   );
 }
