@@ -80,6 +80,31 @@ export const UI_TRANSLATIONS = {
     catIndian: 'Indian Curries',
     catBreads: 'Breads & Naan',
     catRice: 'Rice Specials',
+
+    // Cart & WhatsApp Ordering
+    orderTrayTitle: 'Your Order Tray',
+    dishesSelected: 'selected',
+    clear: 'Clear',
+    diningMode: 'Dining Mode',
+    dineIn: 'Dine-In',
+    takeaway: 'Takeaway',
+    delivery: 'Delivery',
+    tableNumberPlaceholder: 'Enter Table Number (e.g. Table 4)',
+    deliveryAddressPlaceholder: 'Delivery Address / Hotel Room #',
+    itemsInTray: 'Items in Tray',
+    emptyTrayTitle: 'Your order tray is empty.',
+    emptyTraySubtitle: 'Browse our chef-curated menu and tap "+ Add" on any dish to begin your order.',
+    each: 'ea',
+    contactPreferences: 'Contact & Preferences',
+    yourNameOptional: 'Your Name (Optional)',
+    phoneWhatsApp: 'Phone / WhatsApp',
+    kitchenNotesPlaceholder: 'Kitchen notes: e.g. Mild spicy, extra chutney, allergy info...',
+    estimatedTotal: 'Estimated Total',
+    orderOnWhatsApp: 'Order on WhatsApp',
+    orderOnLine: 'Order on LINE',
+    orderHelpNote: 'Clicking sends your pre-formatted order directly to kitchen staff.',
+    emptyAlert: 'Your order tray is empty.',
+    tableConfirmPrompt: 'Table number is empty. Would you like to proceed anyway and inform the server directly?',
   },
   th: {
     // Nav
@@ -160,6 +185,31 @@ export const UI_TRANSLATIONS = {
     catIndian: 'แกงอินเดีย',
     catBreads: 'นานและโรตี',
     catRice: 'ข้าวและข้าวหมก',
+
+    // Cart & WhatsApp Ordering
+    orderTrayTitle: 'ถาดรายการอาหารของคุณ',
+    dishesSelected: 'รายการที่เลือก',
+    clear: 'ล้างถาด',
+    diningMode: 'รูปแบบการรับประทาน',
+    dineIn: 'ทานที่ร้าน',
+    takeaway: 'สั่งกลับบ้าน',
+    delivery: 'จัดส่ง',
+    tableNumberPlaceholder: 'ระบุหมายเลขโต๊ะ (เช่น โต๊ะ 4)',
+    deliveryAddressPlaceholder: 'ที่อยู่จัดส่ง / หมายเลขห้องพักโรงแรม',
+    itemsInTray: 'รายการอาหารในถาด',
+    emptyTrayTitle: 'ถาดรายการอาหารของคุณยังว่างอยู่',
+    emptyTraySubtitle: 'เลือกชมเมนูอาหารแล้วกด "+ สั่งอาหาร" เพื่อเริ่มรายการ',
+    each: 'ต่อจาน',
+    contactPreferences: 'ข้อมูลติดต่อและข้อกำหนดพิเศษ',
+    yourNameOptional: 'ชื่อของคุณ (ไม่บังคับ)',
+    phoneWhatsApp: 'เบอร์โทรศัพท์ / WhatsApp',
+    kitchenNotesPlaceholder: 'หมายเหตุถึงครัว: เช่น เผ็ดน้อย, ขอชัทนีย์เพิ่ม, ข้อมูลการแพ้อาหาร...',
+    estimatedTotal: 'ยอดรวมโดยประมาณ',
+    orderOnWhatsApp: 'สั่งทาง WhatsApp',
+    orderOnLine: 'สั่งทาง LINE',
+    orderHelpNote: 'กดปุ่มเพื่อส่งรายการสั่งอาหารที่จัดรูปแบบเรียบร้อยไปยังพนักงานครัวโดยตรง',
+    emptyAlert: 'ถาดรายการอาหารของคุณยังไม่มีรายการ',
+    tableConfirmPrompt: 'ยังไม่ได้ระบุหมายเลขโต๊ะ คุณต้องการส่งรายการต่อไปและแจ้งพนักงานที่โต๊ะโดยตรงหรือไม่?',
   },
 };
 
@@ -264,3 +314,4 @@ export const DISH_TRANSLATIONS_TH: Record<string, { name: string; desc?: string 
     desc: 'พิซซ่าเตาหินอบชีสโมซซาเรลล่าสด ใบโหระพา และน้ำมันมะกอก',
   },
 };
+
