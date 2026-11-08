@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { MenuService } from "../../services/menuService";
+import { uploadDishImage, fetchImageFromLink } from '../../services/storageService';
 import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from '../../types';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import {
@@ -34,7 +35,9 @@ import {
   Instagram,
   BookOpen,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Link as LinkIcon,
+  ExternalLink
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -105,6 +108,15 @@ export default function AdminDashboard({
   // Simulates loading states for premium visual feel
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
+  // Image Source Mode states (Device Upload vs. Instagram/Web Link)
+  const [dishImageMode, setDishImageMode] = useState<'upload' | 'link'>('upload');
+  const [dishLinkInput, setDishLinkInput] = useState<string>('');
+  const [isFetchingLink, setIsFetchingLink] = useState<boolean>(false);
+
+  const [galleryImageMode, setGalleryImageMode] = useState<'upload' | 'link'>('upload');
+  const [galleryLinkInput, setGalleryLinkInput] = useState<string>('');
+  const [isFetchingGalleryLink, setIsFetchingGalleryLink] = useState<boolean>(false);
 
   // Stats Derived States
   const stats = useMemo(() => {
@@ -308,101 +320,122 @@ export default function AdminDashboard({
     }
   };
 
-  // Base64 image upload & verification
+  // Dish photo upload from device (uploads to Supabase Storage + fallback)
   const handleFoodFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const maxSizeBytes = 2 * 1024 * 1024;
-    const sizeInMB = file.size / (1024 * 1024);
-
+    const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
     if (file.size > maxSizeBytes) {
-      showToast(`Selected file is too large (${sizeInMB.toFixed(2)} MB). Max limit is 2 MB.`, 'error');
+      showToast(`Selected file is too large (${sizeInMB} MB). Max limit is 2 MB.`, 'error');
       return;
     }
 
-    setUploadProgress(20);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64Data = event.target?.result as string;
-      setUploadProgress(60);
-
-      const tempImg = new Image();
-      tempImg.onload = () => {
-        const isDimOk = tempImg.width === 1200 && tempImg.height === 1200;
-        setFoodImgValidation({
-          width: tempImg.width,
-          height: tempImg.height,
-          sizeMB: sizeInMB.toFixed(2),
-          isCorrectSize: true,
-          isCorrectDimensions: isDimOk
-        });
-
-        setDishForm(curr => ({ ...curr, image: base64Data }));
-        setUploadProgress(100);
-        setTimeout(() => setUploadProgress(null), 300);
-        
-        if (isDimOk) {
-          showToast('Image loaded. Perfect 1200×1200 px resolution!');
-        } else {
-          showToast(`Image loaded (${tempImg.width}×${tempImg.height} px). Recommended is 1200×1200 px.`, 'info');
-        }
-      };
-      tempImg.onerror = () => {
-        showToast('Image verification failed. Please try a different photo.', 'error');
-        setUploadProgress(null);
-      };
-      tempImg.src = base64Data;
-    };
-    reader.readAsDataURL(file);
+    setUploadProgress(30);
+    try {
+      const res = await uploadDishImage(file, dishForm.name || 'dish', 'food-images');
+      setDishForm(curr => ({ ...curr, image: res.url }));
+      const isDimOk = res.width === 1200 && res.height === 1200;
+      setFoodImgValidation({
+        width: res.width || 1200,
+        height: res.height || 1200,
+        sizeMB: res.sizeMB || sizeInMB,
+        isCorrectSize: true,
+        isCorrectDimensions: isDimOk
+      });
+      setUploadProgress(100);
+      setTimeout(() => setUploadProgress(null), 300);
+      showToast(res.source === 'supabase' ? 'Photo uploaded to Supabase Storage!' : 'Photo loaded successfully!');
+    } catch (err: any) {
+      setUploadProgress(null);
+      showToast(err.message || 'Failed to upload photo.', 'error');
+    }
   };
 
+  // Fetch dish photo from Instagram post or external link
+  const handleFetchDishLink = async () => {
+    if (!dishLinkInput.trim()) {
+      showToast('Please enter an Instagram post link or image URL.', 'error');
+      return;
+    }
+    setIsFetchingLink(true);
+    try {
+      const res = await fetchImageFromLink(dishLinkInput, dishForm.name || 'dish', 'food-images');
+      setDishForm(curr => ({ ...curr, image: res.url }));
+      const isDimOk = res.width === 1200 && res.height === 1200;
+      setFoodImgValidation({
+        width: res.width || 1200,
+        height: res.height || 1200,
+        sizeMB: res.sizeMB || '1.0',
+        isCorrectSize: true,
+        isCorrectDimensions: isDimOk
+      });
+      showToast(res.source === 'supabase' ? 'Image fetched & saved to Supabase Storage!' : 'Image loaded from link!');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to fetch image from link.', 'error');
+    } finally {
+      setIsFetchingLink(false);
+    }
+  };
+
+  // Gallery photo upload from device
   const handleGalleryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const maxSizeBytes = 2 * 1024 * 1024;
-    const sizeInMB = file.size / (1024 * 1024);
-
+    const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
     if (file.size > maxSizeBytes) {
-      showToast(`Selected file is too large (${sizeInMB.toFixed(2)} MB). Max limit is 2 MB.`, 'error');
+      showToast(`Selected file is too large (${sizeInMB} MB). Max limit is 2 MB.`, 'error');
       return;
     }
 
-    setUploadProgress(20);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64Data = event.target?.result as string;
-      setUploadProgress(60);
+    setUploadProgress(30);
+    try {
+      const res = await uploadDishImage(file, 'ambience-gallery', 'gallery');
+      setGalleryForm(curr => ({ ...curr, image: res.url }));
+      const isDimOk = res.width === 1600 && res.height === 900;
+      setGalleryImgValidation({
+        width: res.width || 1600,
+        height: res.height || 900,
+        sizeMB: res.sizeMB || sizeInMB,
+        isCorrectSize: true,
+        isCorrectDimensions: isDimOk
+      });
+      setUploadProgress(100);
+      setTimeout(() => setUploadProgress(null), 300);
+      showToast(res.source === 'supabase' ? 'Gallery photo uploaded to Supabase Storage!' : 'Gallery photo loaded!');
+    } catch (err: any) {
+      setUploadProgress(null);
+      showToast(err.message || 'Failed to upload gallery photo.', 'error');
+    }
+  };
 
-      const tempImg = new Image();
-      tempImg.onload = () => {
-        const isDimOk = tempImg.width === 1600 && tempImg.height === 900;
-        setGalleryImgValidation({
-          width: tempImg.width,
-          height: tempImg.height,
-          sizeMB: sizeInMB.toFixed(2),
-          isCorrectSize: true,
-          isCorrectDimensions: isDimOk
-        });
-
-        setGalleryForm(curr => ({ ...curr, image: base64Data }));
-        setUploadProgress(100);
-        setTimeout(() => setUploadProgress(null), 300);
-
-        if (isDimOk) {
-          showToast('Gallery image loaded. Matches 1600×900 px aspect ratio!');
-        } else {
-          showToast(`Gallery image loaded (${tempImg.width}×${tempImg.height} px). Recommended is 1600×900 px.`, 'info');
-        }
-      };
-      tempImg.onerror = () => {
-        showToast('Failed to load gallery photo.', 'error');
-        setUploadProgress(null);
-      };
-      tempImg.src = base64Data;
-    };
-    reader.readAsDataURL(file);
+  // Fetch gallery photo from Instagram post or external link
+  const handleFetchGalleryLink = async () => {
+    if (!galleryLinkInput.trim()) {
+      showToast('Please enter an Instagram post link or image URL.', 'error');
+      return;
+    }
+    setIsFetchingGalleryLink(true);
+    try {
+      const res = await fetchImageFromLink(galleryLinkInput, 'ambience-gallery', 'gallery');
+      setGalleryForm(curr => ({ ...curr, image: res.url }));
+      const isDimOk = res.width === 1600 && res.height === 900;
+      setGalleryImgValidation({
+        width: res.width || 1600,
+        height: res.height || 900,
+        sizeMB: res.sizeMB || '1.0',
+        isCorrectSize: true,
+        isCorrectDimensions: isDimOk
+      });
+      showToast(res.source === 'supabase' ? 'Gallery photo saved to Supabase Storage!' : 'Gallery photo loaded!');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to fetch gallery image from link.', 'error');
+    } finally {
+      setIsFetchingGalleryLink(false);
+    }
   };
 
   const moveGalleryItem = (index: number, direction: 'up' | 'down') => {
@@ -1201,31 +1234,109 @@ export default function AdminDashboard({
                         </span>
                       </div>
 
-                      <input
-                        type="text"
-                        value={dishForm.image || ''}
-                        onChange={(e) => setDishForm({ ...dishForm, image: e.target.value })}
-                        placeholder="Or enter direct image URL..."
-                        className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2.5 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
-                      />
+                      {/* Source mode toggle buttons */}
+                      <div className="flex rounded-xl bg-[#F5F2EB] p-1 border border-[rgba(122,74,34,0.12)] gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setDishImageMode('upload')}
+                          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                            dishImageMode === 'upload'
+                              ? 'bg-white text-[#A90E02] shadow-xs'
+                              : 'text-[#735B43] hover:text-[#2B1A0E]'
+                          }`}
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          From Device
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDishImageMode('link')}
+                          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                            dishImageMode === 'link'
+                              ? 'bg-white text-[#A90E02] shadow-xs'
+                              : 'text-[#735B43] hover:text-[#2B1A0E]'
+                          }`}
+                        >
+                          <Instagram className="w-3.5 h-3.5 text-[#E1306C]" />
+                          Instagram / Web Link
+                        </button>
+                      </div>
 
-                      <input
-                        type="file"
-                        ref={foodFileRef}
-                        accept="image/*"
-                        onChange={handleFoodFileChange}
-                        className="hidden"
-                      />
+                      {/* MODE A: Device File Upload */}
+                      {dishImageMode === 'upload' && (
+                        <div>
+                          <input
+                            type="file"
+                            ref={foodFileRef}
+                            accept="image/*"
+                            onChange={handleFoodFileChange}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => foodFileRef.current?.click()}
+                            className="w-full text-center border-dashed border-[rgba(122,74,34,0.3)] border bg-[#FFFDF9] text-xs text-[#8C5E2D] font-bold py-3 rounded-xl hover:bg-[#FDF8F1] transition-all flex items-center justify-center gap-2"
+                            disabled={uploadProgress !== null}
+                          >
+                            <Upload className="w-4 h-4" />
+                            {uploadProgress !== null ? 'Uploading to Supabase Storage...' : 'Browse photo from laptop/device'}
+                          </button>
+                        </div>
+                      )}
 
-                      <button
-                        type="button"
-                        onClick={() => foodFileRef.current?.click()}
-                        className="w-full text-center border-dashed border-[rgba(122,74,34,0.3)] border bg-[#FFFDF9] text-xs text-[#8C5E2D] font-bold py-2.5 rounded-xl hover:bg-[#FDF8F1] transition-all flex items-center justify-center gap-2"
-                        disabled={uploadProgress !== null}
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        {uploadProgress !== null ? 'Loading image...' : 'Browse photo from device'}
-                      </button>
+                      {/* MODE B: Fetch from Instagram or Image Link */}
+                      {dishImageMode === 'link' && (
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={dishLinkInput}
+                              onChange={(e) => setDishLinkInput(e.target.value)}
+                              placeholder="Paste Instagram post URL or direct image link..."
+                              className="flex-1 bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2.5 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleFetchDishLink();
+                                }
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={handleFetchDishLink}
+                              disabled={isFetchingLink}
+                              className="bg-[#A90E02] hover:bg-[#8A0B02] text-[#FFFDF9] px-4 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-50"
+                            >
+                              {isFetchingLink ? (
+                                <>
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                  Fetching...
+                                </>
+                              ) : (
+                                <>
+                                  <LinkIcon className="w-3.5 h-3.5" />
+                                  Fetch & Load
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          <div className="bg-[#FDF8F1] p-2.5 rounded-xl border border-[rgba(122,74,34,0.12)] text-[11px] text-[#735B43] leading-relaxed">
+                            💡 <strong>Instagram Tip:</strong> You can paste an Instagram post URL (e.g. <code>instagram.com/p/...</code>), or right-click any photo on Instagram and select <em>"Copy Image Address"</em> to paste the direct photo link!
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Manual Image URL override */}
+                      <div>
+                        <span className="block text-[11px] font-semibold text-[#8C7358] mb-1">Active Image Asset URL:</span>
+                        <input
+                          type="text"
+                          value={dishForm.image || ''}
+                          onChange={(e) => setDishForm({ ...dishForm, image: e.target.value })}
+                          placeholder="Direct image URL or Supabase CDN link..."
+                          className="w-full bg-[#FDF8F1] border border-[rgba(122,74,34,0.15)] rounded-xl p-2 text-xs text-[#735B43] focus:outline-none focus:border-[#A90E02]"
+                        />
+                      </div>
 
                       {foodImgValidation && (
                         <div className="bg-[#FFFDF9] border border-[rgba(122,74,34,0.16)] p-3 rounded-xl space-y-1 text-xs text-[#5C3E1F]">
@@ -2076,33 +2187,108 @@ export default function AdminDashboard({
                       </span>
                     </div>
 
-                    <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1 mt-2">Image URL</label>
-                    <input
-                      type="text"
-                      value={galleryForm.image}
-                      onChange={(e) => setGalleryForm({ ...galleryForm, image: e.target.value })}
-                      placeholder="https://..."
-                      className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2.5 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
-                    />
-                    
-                    <input
-                      type="file"
-                      ref={galleryFileRef}
-                      accept="image/*"
-                      onChange={handleGalleryFileChange}
-                      className="hidden"
-                    />
-
-                    <div className="pt-2">
+                    {/* Ambience source mode toggle buttons */}
+                    <div className="flex rounded-xl bg-[#F5F2EB] p-1 border border-[rgba(122,74,34,0.12)] gap-1 my-2">
                       <button
                         type="button"
-                        onClick={() => galleryFileRef.current?.click()}
-                        className="w-full text-center border-dashed border-[rgba(122,74,34,0.3)] border bg-white text-xs text-[#8C5E2D] font-bold py-2.5 rounded-xl hover:bg-[#FDF8F1] transition-all flex items-center justify-center gap-2"
-                        disabled={uploadProgress !== null}
+                        onClick={() => setGalleryImageMode('upload')}
+                        className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                          galleryImageMode === 'upload'
+                            ? 'bg-white text-[#A90E02] shadow-xs'
+                            : 'text-[#735B43] hover:text-[#2B1A0E]'
+                        }`}
                       >
                         <Upload className="w-3.5 h-3.5" />
-                        {uploadProgress !== null ? 'Uploading...' : 'Browse gallery photo from device'}
+                        From Device
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setGalleryImageMode('link')}
+                        className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                          galleryImageMode === 'link'
+                            ? 'bg-white text-[#A90E02] shadow-xs'
+                            : 'text-[#735B43] hover:text-[#2B1A0E]'
+                        }`}
+                      >
+                        <Instagram className="w-3.5 h-3.5 text-[#E1306C]" />
+                        Instagram / Web Link
+                      </button>
+                    </div>
+
+                    {/* MODE A: Device File Upload */}
+                    {galleryImageMode === 'upload' && (
+                      <div className="pt-1">
+                        <input
+                          type="file"
+                          ref={galleryFileRef}
+                          accept="image/*"
+                          onChange={handleGalleryFileChange}
+                          className="hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => galleryFileRef.current?.click()}
+                          className="w-full text-center border-dashed border-[rgba(122,74,34,0.3)] border bg-white text-xs text-[#8C5E2D] font-bold py-3 rounded-xl hover:bg-[#FDF8F1] transition-all flex items-center justify-center gap-2"
+                          disabled={uploadProgress !== null}
+                        >
+                          <Upload className="w-4 h-4" />
+                          {uploadProgress !== null ? 'Uploading to Supabase Storage...' : 'Browse photo from device'}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* MODE B: Fetch from Instagram or Image Link */}
+                    {galleryImageMode === 'link' && (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={galleryLinkInput}
+                            onChange={(e) => setGalleryLinkInput(e.target.value)}
+                            placeholder="Paste Instagram post URL or direct image link..."
+                            className="flex-1 bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2.5 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleFetchGalleryLink();
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleFetchGalleryLink}
+                            disabled={isFetchingGalleryLink}
+                            className="bg-[#A90E02] hover:bg-[#8A0B02] text-[#FFFDF9] px-4 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-50"
+                          >
+                            {isFetchingGalleryLink ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                Fetching...
+                              </>
+                            ) : (
+                              <>
+                                <LinkIcon className="w-3.5 h-3.5" />
+                                Fetch & Load
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <div className="bg-[#FDF8F1] p-2.5 rounded-xl border border-[rgba(122,74,34,0.12)] text-[11px] text-[#735B43] leading-relaxed">
+                          💡 <strong>Tip:</strong> Paste an Instagram post URL (e.g. <code>instagram.com/p/...</code>) or right-click any Instagram/web image and select <em>"Copy Image Address"</em>.
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Manual Image URL override */}
+                    <div className="mt-2">
+                      <span className="block text-[11px] font-semibold text-[#8C7358] mb-1">Active Ambience Asset URL:</span>
+                      <input
+                        type="text"
+                        value={galleryForm.image}
+                        onChange={(e) => setGalleryForm({ ...galleryForm, image: e.target.value })}
+                        placeholder="Direct image URL or Supabase CDN link..."
+                        className="w-full bg-[#FDF8F1] border border-[rgba(122,74,34,0.15)] rounded-xl p-2 text-xs text-[#735B43] focus:outline-none focus:border-[#A90E02]"
+                      />
                     </div>
 
                     {galleryImgValidation && (
