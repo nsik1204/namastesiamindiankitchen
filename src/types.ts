@@ -2,7 +2,9 @@ export interface Dish {
   id: number;
   slug: string;
   name: string;
+  nameTH?: string;
   description: string;
+  descriptionTH?: string;
   priceTHB: number;
   category: string; // matches category_id
   type: 'veg' | 'nonveg';
@@ -26,8 +28,10 @@ export interface Dish {
 export interface Category {
   id: string;
   slug: string;
-  name: string; // matches name VARCHAR
-  label: string; // maps to label / name for visual display UI
+  name: string;
+  nameTH?: string;
+  label: string;
+  labelTH?: string;
   display_order: number;
   active?: boolean; // matches active BOOLEAN or is_visible
 }

@@ -243,3 +243,4 @@ _Sent via Namaste Siam Digital Menu_`;
     </div>
   );
 }
+

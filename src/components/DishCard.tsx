@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dish } from '../types';
 import { Plus, Check } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface DishCardProps {
   dish: Dish;
@@ -12,7 +13,10 @@ interface DishCardProps {
 }
 
 export default function DishCard({ dish, onClick, idPrefix, onAddToCart, cartQuantity = 0 }: DishCardProps) {
+  const { t, getDishName, getDishDescription } = useLanguage();
   const isVeg = dish.type === 'veg';
+  const displayName = getDishName(dish);
+  const displayDesc = getDishDescription(dish);
 
   return (
     <article
@@ -21,7 +25,7 @@ export default function DishCard({ dish, onClick, idPrefix, onAddToCart, cartQua
       onClick={onClick}
       tabIndex={0}
       role="button"
-      aria-label={`${dish.name} - ฿${dish.priceTHB}`}
+      aria-label={`${displayName} - ฿${dish.priceTHB}`}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
@@ -34,7 +38,7 @@ export default function DishCard({ dish, onClick, idPrefix, onAddToCart, cartQua
           <img
             className="dish-img"
             src={dish.image}
-            alt={dish.name}
+            alt={displayName}
             loading="lazy"
           />
           {cartQuantity > 0 && (
@@ -47,25 +51,25 @@ export default function DishCard({ dish, onClick, idPrefix, onAddToCart, cartQua
         <div className="dish-body" id={`${idPrefix}-body-${dish.id}`}>
           <div className="dish-top" id={`${idPrefix}-top-${dish.id}`}>
             <div className="dish-name" id={`${idPrefix}-name-${dish.id}`}>
-              {dish.name}
+              {displayName}
             </div>
             <div className="dish-price" id={`${idPrefix}-price-${dish.id}`}>
               ฿{dish.priceTHB}
             </div>
           </div>
 
-          {dish.description && (
+          {displayDesc && (
             <div className="dish-desc" id={`${idPrefix}-desc-${dish.id}`}>
-              {dish.description}
+              {displayDesc}
             </div>
           )}
 
           <div className="badges" id={`${idPrefix}-badges-${dish.id}`}>
             <span className={`badge ${isVeg ? 'green' : ''}`}>
-              {isVeg ? 'Veg' : 'Non-Veg'}
+              {isVeg ? t('veg') : t('nonVeg')}
             </span>
-            {dish.chefSpecial && <span className="badge">Chef Special</span>}
-            {dish.bestseller && <span className="badge">Bestseller</span>}
+            {dish.chefSpecial && <span className="badge">{t('chefSpecial')}</span>}
+            {dish.bestseller && <span className="badge">{t('bestseller')}</span>}
           </div>
 
           {dish.spiceLevel && <div className="spice">🌶 {dish.spiceLevel}</div>}
@@ -100,7 +104,7 @@ export default function DishCard({ dish, onClick, idPrefix, onAddToCart, cartQua
             }`}
           >
             <Plus className="w-3.5 h-3.5" />
-            {cartQuantity > 0 ? `Add Another (${cartQuantity} in Tray)` : '+ Add to Order'}
+            {cartQuantity > 0 ? `${t('addAnother')} (${cartQuantity} ${t('inTray')})` : t('addToOrder')}
           </button>
         </div>
       )}

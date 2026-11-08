@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShoppingBag, ArrowRight } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface FloatingCartPillProps {
   totalCount: number;
@@ -8,6 +9,7 @@ interface FloatingCartPillProps {
 }
 
 export default function FloatingCartPill({ totalCount, totalTHB, onClick }: FloatingCartPillProps) {
+  const { t } = useLanguage();
   if (totalCount === 0) return null;
 
   return (
@@ -22,7 +24,7 @@ export default function FloatingCartPill({ totalCount, totalTHB, onClick }: Floa
             {totalCount}
           </div>
           <span className="font-bold text-sm tracking-wide">
-            {totalCount === 1 ? 'Dish in Tray' : 'Dishes in Tray'}
+            {totalCount === 1 ? t('dishInTray') : t('dishesInTray')}
           </span>
         </div>
 
@@ -36,3 +38,4 @@ export default function FloatingCartPill({ totalCount, totalTHB, onClick }: Floa
     </div>
   );
 }
+
