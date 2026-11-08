@@ -1127,8 +1127,8 @@ export default function App() {
 
   const dishGridStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-    gap: 18,
+    gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+    gap: 16,
   };
 
   const cardStyle: React.CSSProperties = {
@@ -1513,7 +1513,7 @@ export default function App() {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 4,
-                      boxShadow: '0 4px 10px rgba(169,14,2,0.18)',
+                      boxShadow: '0 4px 10px rgba(23,61,50,0.2)',
                     }}
                   >
                     {t('addToOrder')} {getCartQuantity(todaysSpecial.id) > 0 && `(${getCartQuantity(todaysSpecial.id)})`}
@@ -1907,13 +1907,13 @@ export default function App() {
               style={{ width: '100%', height: '100%', minHeight: 240, objectFit: 'cover' }}
             />
             <div style={{ padding: 26 }}>
-              <h2 style={{ margin: 0, fontSize: 25, fontWeight: 800, color: T.ink }}>
+              <h2 style={{ margin: 0, fontSize: 25, fontWeight: 800, color: T.ink, fontFamily: 'var(--font-display)' }}>
                 {getDishName(selectedDish)}
               </h2>
               <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.75, marginTop: 10 }}>
                 {getDishDescription(selectedDish)}
               </p>
-              <div style={{ fontSize: 21, fontWeight: 800, color: T.wine, marginTop: 12 }}>
+              <div style={{ fontSize: 21, fontWeight: 800, color: T.wine, marginTop: 12, fontFamily: 'var(--font-display)' }}>
                 ฿{selectedDish.priceTHB}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
@@ -1930,6 +1930,36 @@ export default function App() {
                 >
                   {selectedDish.type === 'veg' ? t('veg') : t('nonVeg')}
                 </span>
+                {selectedDish.chefSpecial && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      borderRadius: 999,
+                      padding: '6px 12px',
+                      color: '#B58C45',
+                      background: 'rgba(217,182,109,0.15)',
+                      border: '1px solid rgba(217,182,109,0.4)',
+                    }}
+                  >
+                    ⭐ {t('chefSpecial')}
+                  </span>
+                )}
+                {selectedDish.bestseller && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      borderRadius: 999,
+                      padding: '6px 12px',
+                      color: '#9B4935',
+                      background: 'rgba(155,73,53,0.12)',
+                      border: '1px solid rgba(155,73,53,0.3)',
+                    }}
+                  >
+                    🔥 {t('bestseller')}
+                  </span>
+                )}
                 {selectedDish.spiceLevel && (
                   <span
                     style={{
