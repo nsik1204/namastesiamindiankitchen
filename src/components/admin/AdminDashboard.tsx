@@ -2286,12 +2286,12 @@ export default function AdminDashboard({
                   </div>
 
                   {galleryForm.image && (
-                    <div className="border border-[#E4D7BF] p-2.5 rounded-xl bg-white flex flex-col items-center justify-center">
-                      <span className="text-xs text-[#75685A] font-semibold uppercase tracking-wider mb-1">Preview</span>
+                    <div className="border border-[#E4D7BF] p-2 rounded-xl bg-white flex flex-col items-center justify-center">
+                      <span className="text-[11px] text-[#75685A] font-semibold uppercase tracking-wider mb-1">Preview</span>
                       <img 
                         src={galleryForm.image} 
                         alt="Ambience preview" 
-                        className={`object-cover rounded-xl border border-[#E4D7BF] shadow-xs ${galleryForm.tall ? 'w-24 h-36' : 'w-full max-w-[220px] h-28'}`}
+                        className={`object-cover rounded-xl border border-[#E4D7BF] shadow-xs ${galleryForm.tall ? 'w-20 h-28' : 'w-full max-w-[180px] h-24'}`}
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1528605105345-5344ea20e269?auto=format&fit=crop&w=1200&q=80';
                         }}
@@ -2302,7 +2302,7 @@ export default function AdminDashboard({
                   <div className="flex gap-2">
                     <button
                       type="submit"
-                      className="flex-1 bg-[#173D32] hover:bg-[#102C25] text-[#FFF9EF] font-bold py-2.5 rounded-xl text-xs transition-colors shadow-xs"
+                      className="flex-1 bg-[#173D32] hover:bg-[#102C25] text-[#FFF9EF] font-bold py-2.5 rounded-xl text-xs transition-colors shadow-xs cursor-pointer"
                     >
                       {editingGalleryIndex !== null ? 'Replace Photo' : '+ Add Photo to Gallery'}
                     </button>
@@ -2310,7 +2310,7 @@ export default function AdminDashboard({
                       <button
                         type="button"
                         onClick={handleCancelEditGalleryItem}
-                        className="bg-[#F8EEDB] hover:bg-[#E4D7BF] text-[#30251E] font-semibold px-4 rounded-xl text-xs transition-colors"
+                        className="bg-[#F8EEDB] hover:bg-[#E4D7BF] text-[#30251E] font-semibold px-4 rounded-xl text-xs transition-colors cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -2326,11 +2326,11 @@ export default function AdminDashboard({
                   <p className="text-xs text-[#75685A] mt-0.5">Live photos featured in the public website ambience gallery section.</p>
                 </div>
 
-                <div className="overflow-y-auto flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 pr-1.5 scrollbar-thin">
+                <div className="overflow-y-auto flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 pr-1.5 scrollbar-thin content-start items-start">
                   {gallery.map((g, index) => (
                     <div 
                       key={index}
-                      className="bg-white border border-[#E4D7BF] rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                      className="bg-white border border-[#E4D7BF] rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col"
                     >
                       <div className="relative aspect-[16/10] bg-[#F8EEDB] overflow-hidden">
                         <img 
@@ -2358,25 +2358,23 @@ export default function AdminDashboard({
                       </div>
 
                       <div className="p-3 bg-white space-y-2 border-t border-[#E4D7BF]">
-                        <p className="text-xs font-semibold text-[#30251E] truncate" title={g.alt}>
-                          {g.alt || 'Ambience Photo'}
-                        </p>
-
-                        <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-[#E4D7BF]/60 text-xs">
-                          {/* Sort input & steppers */}
-                          <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <p className="text-xs font-bold text-[#30251E] truncate flex-1" title={g.alt}>
+                            {g.alt || 'Ambience Photo'}
+                          </p>
+                          <div className="flex items-center gap-1 shrink-0">
                             <span className="text-[11px] font-semibold text-[#75685A]">Sort:</span>
                             <input
                               type="number"
                               value={g.display_order ?? index}
                               onChange={(e) => handleUpdateGalleryOrder(index, Number(e.target.value))}
-                              className="w-10 h-7 border border-[#E4D7BF] rounded-md text-xs text-center font-bold bg-[#F8EEDB] text-[#30251E] focus:outline-none focus:border-[#173D32]"
+                              className="w-9 h-6 border border-[#E4D7BF] rounded text-xs text-center font-bold bg-[#F8EEDB] text-[#30251E] focus:outline-none focus:border-[#173D32]"
                             />
                             <button
                               type="button"
                               onClick={() => moveGalleryItem(index, 'up')}
                               disabled={index === 0}
-                              className="p-1 rounded-md text-[#75685A] hover:bg-[#F8EEDB] hover:text-[#173D32] disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                              className="p-0.5 rounded text-[#75685A] hover:text-[#173D32] disabled:opacity-20 disabled:pointer-events-none cursor-pointer"
                               title="Move Left"
                             >
                               <ChevronLeft className="w-3.5 h-3.5" />
@@ -2385,57 +2383,58 @@ export default function AdminDashboard({
                               type="button"
                               onClick={() => moveGalleryItem(index, 'down')}
                               disabled={index === gallery.length - 1}
-                              className="p-1 rounded-md text-[#75685A] hover:bg-[#F8EEDB] hover:text-[#173D32] disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                              className="p-0.5 rounded text-[#75685A] hover:text-[#173D32] disabled:opacity-20 disabled:pointer-events-none cursor-pointer"
                               title="Move Right"
                             >
                               <ChevronRight className="w-3.5 h-3.5" />
                             </button>
                           </div>
+                        </div>
 
-                          {/* Action buttons */}
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateGalleryActive(index, g.active === false, g.active === false ? 'shown' : 'hidden')}
-                              className={`h-7 px-2 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                                g.active !== false
-                                  ? 'bg-[#FFF9EF] hover:bg-[#F8EEDB] text-[#75685A] border-[#E4D7BF]'
-                                  : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                              }`}
-                              title={g.active !== false ? 'Hide from public site' : 'Show on public site'}
-                            >
-                              {g.active !== false ? 'Hide' : 'Show'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleEditGalleryItem(index)}
-                              className="h-7 px-2 bg-[#FFF9EF] hover:bg-[#F8EEDB] text-[#173D32] border border-[#E4D7BF] rounded-lg text-xs font-bold transition-all cursor-pointer"
-                              title="Replace photo"
-                            >
-                              Replace
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteGalleryItem(index)}
-                              className="h-7 px-2 text-[#A33C32] hover:bg-[#A33C32]/10 border border-[#A33C32]/25 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                              title="Delete photo"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                        {/* Actions Row */}
+                        <div className="flex items-center gap-1.5 pt-2 border-t border-[#E4D7BF]/60 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateGalleryActive(index, g.active === false, g.active === false ? 'shown' : 'hidden')}
+                            className={`flex-1 h-7 px-2 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                              g.active !== false
+                                ? 'bg-[#FFF9EF] hover:bg-[#F8EEDB] text-[#75685A] border-[#E4D7BF]'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                            }`}
+                            title={g.active !== false ? 'Hide from public site' : 'Show on public site'}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${g.active !== false ? 'bg-emerald-600' : 'bg-[#75685A]'}`} />
+                            <span>{g.active !== false ? 'Hide' : 'Show'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleEditGalleryItem(index)}
+                            className="flex-1 h-7 px-2 bg-[#FFF9EF] hover:bg-[#F8EEDB] text-[#173D32] border border-[#E4D7BF] rounded-lg text-xs font-bold transition-all cursor-pointer text-center"
+                            title="Replace photo"
+                          >
+                            Replace
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteGalleryItem(index)}
+                            className="h-7 w-7 text-[#A33C32] hover:bg-[#A33C32]/10 border border-[#A33C32]/25 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center shrink-0"
+                            title="Delete photo"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     </div>
                   ))}
 
                   {gallery.length < 2 && (
-                    <div className="border-2 border-dashed border-[#E4D7BF] rounded-2xl p-6 flex flex-col items-center justify-center text-center bg-[#F8EEDB]/30 min-h-[190px]">
-                      <div className="w-10 h-10 rounded-full bg-[#173D32]/10 flex items-center justify-center text-[#173D32] mb-2.5">
-                        <ImageIcon className="w-5 h-5" />
+                    <div className="border-2 border-dashed border-[#E4D7BF] rounded-2xl p-5 flex flex-col items-center justify-center text-center bg-[#F8EEDB]/30 h-full min-h-[220px]">
+                      <div className="w-9 h-9 rounded-full bg-[#173D32]/10 flex items-center justify-center text-[#173D32] mb-2">
+                        <ImageIcon className="w-4 h-4" />
                       </div>
                       <span className="text-xs font-bold text-[#30251E] block">Add More Ambience Photos</span>
-                      <span className="text-[11px] text-[#75685A] max-w-xs mt-1 block leading-relaxed">
-                        Upload dining room, bar, and evening lighting photos to enrich your guest visual experience.
+                      <span className="text-[11px] text-[#75685A] max-w-[170px] mt-1 block leading-relaxed">
+                        Upload dining room, bar, and outdoor terrace photos.
                       </span>
                     </div>
                   )}
