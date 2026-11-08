@@ -24,11 +24,12 @@ export function sanitizeFileName(originalName: string, prefix: string): string {
 }
 
 /**
- * Inspects an image data URL or blob to get its natural dimensions and file size.
+ * Inspects an image data URL or direct link to get its natural dimensions.
  */
 export function inspectImage(dataUrl: string): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
     img.onerror = () => reject(new Error('Failed to inspect image dimensions.'));
     img.src = dataUrl;
@@ -99,10 +100,10 @@ export async function uploadDishImage(
 }
 
 /**
- * Resolves an external link or Instagram post URL:
- * 1. Calls our server endpoint (/api/fetch-link-image) to fetch without CORS blocks.
- * 2. Uploads the image to Supabase Storage if possible.
- * 3. Returns the public URL, dimensions, and size.
+ * Resolves an external link or Instagram photo URL.
+ * 1. Checks if it's directly readable by browser (e.g. CDN/direct image URL).
+ * 2. If blocked or Instagram post page, calls serverless proxy endpoint /api/fetch-link-image.
+ * 3. Gracefully reports actionable instructions if Meta blocks unauthenticated scraping.
  */
 export async function fetchImageFromLink(
   linkUrl: string,
@@ -114,18 +115,64 @@ export async function fetchImageFromLink(
     throw new Error('Please enter a valid link.');
   }
 
-  // Call server proxy endpoint
-  const response = await fetch('/api/fetch-link-image', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ url: cleanUrl, dishName, bucket })
-  });
+  // Check if it's a direct image URL or Instagram CDN address
+  const isDirectImage =
+    cleanUrl.match(/\.(jpeg|jpg|png|webp|avif)(\?.*)?$/i) ||
+    cleanUrl.includes('scontent') ||
+    cleanUrl.includes('cdninstagram.com') ||
+    cleanUrl.includes('unsplash.com') ||
+    cleanUrl.includes('supabase.co');
 
-  const data = await response.json();
-  if (!response.ok || data.error) {
-    throw new Error(data.error || 'Failed to fetch image from link.');
+  if (isDirectImage) {
+    try {
+      const dims = await inspectImage(cleanUrl);
+      return {
+        url: cleanUrl,
+        width: dims.width,
+        height: dims.height,
+        sizeMB: '1.0',
+        source: 'external'
+      };
+    } catch {
+      // If direct browser loading is blocked by CORS, continue to proxy
+    }
+  }
+
+  // Call server proxy endpoint safely
+  let rawText = '';
+  let data: any = null;
+
+  try {
+    const response = await fetch('/api/fetch-link-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ url: cleanUrl, dishName, bucket })
+    });
+
+    rawText = await response.text();
+    if (!rawText || !rawText.trim()) {
+      throw new SyntaxError('Empty response');
+    }
+
+    data = JSON.parse(rawText);
+
+    if (!response.ok || data.error) {
+      throw new Error(data.error || 'Failed to fetch image from link.');
+    }
+  } catch (err: any) {
+    if (err instanceof SyntaxError || err.message?.includes('JSON') || err.message?.includes('Empty response')) {
+      if (cleanUrl.includes('instagram.com/p/') || cleanUrl.includes('instagram.com/reel/')) {
+        throw new Error(
+          'Instagram post pages are protected by Meta login. Please right-click the photo on Instagram, select "Copy Image Address", and paste that direct link here!'
+        );
+      }
+      throw new Error(
+        'Could not fetch image from this link. Please make sure you are pasting a direct image address (e.g. ending in .jpg, .png, or from "Copy Image Address").'
+      );
+    }
+    throw err;
   }
 
   const previewSrc = data.base64 || data.imageUrl;
@@ -133,7 +180,7 @@ export async function fetchImageFromLink(
   try {
     dims = await inspectImage(previewSrc);
   } catch {
-    // ignore
+    // fallback
   }
 
   const sizeMB = data.sizeBytes ? (data.sizeBytes / (1024 * 1024)).toFixed(2) : '1.0';

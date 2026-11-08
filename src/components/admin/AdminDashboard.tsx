@@ -1292,7 +1292,7 @@ export default function AdminDashboard({
                               type="text"
                               value={dishLinkInput}
                               onChange={(e) => setDishLinkInput(e.target.value)}
-                              placeholder="Paste Instagram post URL or direct image link..."
+                              placeholder="Paste Instagram image address (Copy Image Address) or post link..."
                               className="flex-1 bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2.5 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
@@ -1310,7 +1310,7 @@ export default function AdminDashboard({
                               {isFetchingLink ? (
                                 <>
                                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                  Fetching...
+                                  Loading...
                                 </>
                               ) : (
                                 <>
@@ -1320,8 +1320,8 @@ export default function AdminDashboard({
                               )}
                             </button>
                           </div>
-                          <div className="bg-[#FDF8F1] p-2.5 rounded-xl border border-[rgba(122,74,34,0.12)] text-[11px] text-[#735B43] leading-relaxed">
-                            💡 <strong>Instagram Tip:</strong> You can paste an Instagram post URL (e.g. <code>instagram.com/p/...</code>), or right-click any photo on Instagram and select <em>"Copy Image Address"</em> to paste the direct photo link!
+                          <div className="bg-[#FDF8F1] p-3 rounded-xl border border-[rgba(122,74,34,0.14)] text-xs text-[#735B43] leading-relaxed">
+                            💡 <strong>Instagram Photo Trick:</strong> Instagram par apni photo open karein, photo par <strong>Right-click (ya phone me Long Press / Share)</strong> karke <strong>"Copy Image Address"</strong> select karein aur yahan paste karein. Photo turant Supabase Storage par load ho jayegi!
                           </div>
                         </div>
                       )}
@@ -2245,7 +2245,7 @@ export default function AdminDashboard({
                             type="text"
                             value={galleryLinkInput}
                             onChange={(e) => setGalleryLinkInput(e.target.value)}
-                            placeholder="Paste Instagram post URL or direct image link..."
+                            placeholder="Paste Instagram image address (Copy Image Address) or web link..."
                             className="flex-1 bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2.5 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
@@ -2263,7 +2263,7 @@ export default function AdminDashboard({
                             {isFetchingGalleryLink ? (
                               <>
                                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                Fetching...
+                                Loading...
                               </>
                             ) : (
                               <>
@@ -2273,8 +2273,8 @@ export default function AdminDashboard({
                             )}
                           </button>
                         </div>
-                        <div className="bg-[#FDF8F1] p-2.5 rounded-xl border border-[rgba(122,74,34,0.12)] text-[11px] text-[#735B43] leading-relaxed">
-                          💡 <strong>Tip:</strong> Paste an Instagram post URL (e.g. <code>instagram.com/p/...</code>) or right-click any Instagram/web image and select <em>"Copy Image Address"</em>.
+                        <div className="bg-[#FDF8F1] p-3 rounded-xl border border-[rgba(122,74,34,0.14)] text-xs text-[#735B43] leading-relaxed">
+                          💡 <strong>Instagram Photo Trick:</strong> Instagram par photo par <strong>Right-click / Long press</strong> karke <strong>"Copy Image Address"</strong> copy karein aur yahan paste karein. Photo turant Supabase Storage par load ho jayegi!
                         </div>
                       </div>
                     )}
