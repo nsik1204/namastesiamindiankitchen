@@ -7,6 +7,7 @@ import { getSupabaseClient } from './services/supabaseClient';
 import OrderDrawer, { CartItem } from './components/ordering/OrderDrawer';
 import ReservationModal from './components/ordering/ReservationModal';
 import FloatingCartPill from './components/ordering/FloatingCartPill';
+import GalleryLightbox from './components/gallery/GalleryLightbox';
 import { useLanguage } from './context/LanguageContext';
 
 /* ------------------------------------------------------------------ */
@@ -449,6 +450,57 @@ const EMPTY_RESTAURANT_INFO: RestaurantInfo = {
 
 const EMPTY_ABOUT_INFO: AboutInfo = { story: [], highlights: [] };
 
+const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
+  {
+    image: 'https://images.unsplash.com/photo-1528605105345-5344ea20e269?auto=format&fit=crop&w=1200&q=80',
+    title: 'Fine Dining Room Ambience',
+    alt: 'Fine Dining Room Ambience',
+    tall: true,
+    display_order: 1,
+    active: true,
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1541544181074-e9b7f47eb4f6?auto=format&fit=crop&w=1200&q=80',
+    title: 'Artisanal Tandoor & Food Plating',
+    alt: 'Artisanal Tandoor & Food Plating',
+    tall: false,
+    display_order: 2,
+    active: true,
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
+    title: 'Private & Family Dining Seating',
+    alt: 'Private & Family Dining Seating',
+    tall: false,
+    display_order: 3,
+    active: true,
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1200&q=80',
+    title: 'Tandoor Master Chef at Work',
+    alt: 'Tandoor Master Chef at Work',
+    tall: false,
+    display_order: 4,
+    active: true,
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1200&q=80',
+    title: 'Contemporary Indian & Thai Kitchen',
+    alt: 'Contemporary Indian & Thai Kitchen',
+    tall: false,
+    display_order: 5,
+    active: true,
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1200&q=80',
+    title: 'Authentic Spices & Sizzling Delights',
+    alt: 'Authentic Spices & Sizzling Delights',
+    tall: true,
+    display_order: 6,
+    active: true,
+  },
+];
+
 const LOAD_TIMEOUT_MS = 45000;
 
 function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
@@ -653,6 +705,7 @@ export default function App() {
   });
   const [isOrderDrawerOpen, setIsOrderDrawerOpen] = useState(false);
   const [isReservationOpen, setIsReservationOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   useEffect(() => {
     try {
@@ -913,6 +966,11 @@ export default function App() {
         .sort((a, b) => (a.display_order || 0) - (b.display_order || 0)),
     [gallery]
   );
+
+  const effectiveGallery = useMemo(() => {
+    if (sortedGallery.length > 0) return sortedGallery;
+    return DEFAULT_GALLERY_ITEMS;
+  }, [sortedGallery]);
 
   const handleLiveSearchClick = () => {
     if (searchInputRef.current) {
@@ -1789,32 +1847,76 @@ export default function App() {
 
 
         {/* GALLERY */}
-        {sortedGallery.length > 0 && (
+        {effectiveGallery.length > 0 && (
           <section id="gallery" style={sectionStyle}>
             <SectionTitle lead={t('galleryLead')} accent={t('galleryAccent')} />
             <div
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                gridAutoRows: '180px',
+                gridAutoRows: '190px',
                 gap: 14,
               }}
             >
-              {sortedGallery.map((g, i) => (
-                <img
+              {effectiveGallery.map((g, i) => (
+                <div
                   key={`gal-${g.id ?? i}`}
-                  src={g.image}
-                  alt={g.alt || g.title || 'Restaurant ambience'}
-                  loading="lazy"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setLightboxIndex(i)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setLightboxIndex(i);
+                    }
+                  }}
                   style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
+                    position: 'relative',
                     borderRadius: 16,
+                    overflow: 'hidden',
+                    cursor: 'pointer',
                     border: `1px solid ${T.line}`,
                     gridRow: g.tall ? 'span 2' : 'span 1',
+                    boxShadow: '0 8px 24px rgba(61,31,0,0.06)',
                   }}
-                />
+                  className="group"
+                  aria-label={`${g.alt || g.title || 'Restaurant ambience'} - ${t('clickToEnlarge')}`}
+                >
+                  <img
+                    src={g.image}
+                    alt={g.alt || g.title || 'Restaurant ambience'}
+                    loading="lazy"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                      transition: 'transform 0.4s ease',
+                    }}
+                    className="group-hover:scale-105"
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'linear-gradient(to top, rgba(43,26,14,0.7) 0%, transparent 60%)',
+                      opacity: 0,
+                      transition: 'opacity 0.25s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'flex-end',
+                      padding: 14,
+                    }}
+                    className="group-hover:opacity-100"
+                  >
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#FFFDF9' }}>
+                      {g.title || g.alt || 'Namaste Siam Ambience'}
+                    </span>
+                    <span style={{ fontSize: 10, color: 'rgba(255,253,249,0.8)', marginTop: 2 }}>
+                      🔍 {t('clickToEnlarge')}
+                    </span>
+                  </div>
+                </div>
               ))}
             </div>
           </section>
@@ -2219,6 +2321,16 @@ export default function App() {
         isOpen={isReservationOpen}
         onClose={() => setIsReservationOpen(false)}
         restaurantInfo={info}
+      />
+
+      {/* GALLERY LIGHTBOX */}
+      <GalleryLightbox
+        isOpen={lightboxIndex !== null}
+        onClose={() => setLightboxIndex(null)}
+        items={effectiveGallery}
+        currentIndex={lightboxIndex || 0}
+        onNavigate={(idx) => setLightboxIndex(idx)}
+        instagramHandle={info.instagram}
       />
     </div>
   );

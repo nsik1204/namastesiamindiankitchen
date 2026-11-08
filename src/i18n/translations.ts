@@ -129,6 +129,14 @@ export const UI_TRANSLATIONS = {
     valPhoneRequired: 'Please enter your contact phone or WhatsApp number.',
     valPhoneInvalid: 'Please enter a valid phone number (at least 8 digits).',
     valDatePast: 'Please select today or a future date for your reservation.',
+
+    // Gallery & Lightbox
+    photoOf: 'Photo',
+    of: 'of',
+    nextPhoto: 'Next Photo',
+    prevPhoto: 'Previous Photo',
+    viewInstagram: 'View moments on Instagram',
+    clickToEnlarge: 'Click to expand image',
   },
   th: {
     // Nav
@@ -258,6 +266,14 @@ export const UI_TRANSLATIONS = {
     valPhoneRequired: 'กรุณาระบุหมายเลขโทรศัพท์หรือ WhatsApp สำหรับติดต่อ',
     valPhoneInvalid: 'กรุณาระบุหมายเลขโทรศัพท์ที่ถูกต้อง (อย่างน้อย 8 หลัก)',
     valDatePast: 'กรุณาเลือกวันที่วันนี้หรือวันที่ในอนาคตสำหรับการจอง',
+
+    // Gallery & Lightbox
+    photoOf: 'ภาพที่',
+    of: 'จาก',
+    nextPhoto: 'ภาพถัดไป',
+    prevPhoto: 'ภาพก่อนหน้า',
+    viewInstagram: 'ชมภาพบรรยากาศเพิ่มเติมบน Instagram',
+    clickToEnlarge: 'คลิกเพื่อดูภาพขนาดเต็ม',
   },
 };
 
