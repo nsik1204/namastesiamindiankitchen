@@ -9,6 +9,7 @@ import ReservationModal from './components/ordering/ReservationModal';
 import FloatingCartPill from './components/ordering/FloatingCartPill';
 import GalleryLightbox from './components/gallery/GalleryLightbox';
 import LocationSection from './components/location/LocationSection';
+import FoodLoadingScreen from './components/common/FoodLoadingScreen';
 import { useLanguage } from './context/LanguageContext';
 
 /* ------------------------------------------------------------------ */
@@ -1014,28 +1015,7 @@ export default function App() {
   }
 
   if (loading) {
-    return (
-      <>
-        <Background />
-        <div
-          style={{
-            position: 'relative',
-            zIndex: 10,
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            textAlign: 'center',
-            color: T.wine,
-          }}
-        >
-          <div>
-            <p style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Namaste Siam Indian Kitchen</p>
-            <p style={{ fontSize: 13, opacity: 0.75, marginTop: 6 }}>Loading menu…</p>
-          </div>
-        </div>
-      </>
-    );
+    return <FoodLoadingScreen />;
   }
 
   if (unlockGranted) {
