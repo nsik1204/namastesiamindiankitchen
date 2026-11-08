@@ -2397,12 +2397,12 @@ export default function AdminDashboard({
                           {/* Reorder control badges */}
                           <div className="flex gap-1 items-center">
                             <div className="flex gap-1 items-center mr-1">
-                              <span className="text-xs text-[#E5A33C] font-semibold">Sort:</span>
+                              <span className="text-xs text-[#D9B66D] font-semibold">Sort:</span>
                               <input
                                 type="number"
                                 value={g.display_order ?? 0}
                                 onChange={(e) => handleUpdateGalleryOrder(index, Number(e.target.value))}
-                                className="w-10 border border-white/30 rounded px-1 py-0.5 text-xs text-center font-bold bg-black/60 text-white focus:outline-none focus:border-[#E5A33C]"
+                                className="w-10 border border-white/30 rounded px-1 py-0.5 text-xs text-center font-bold bg-black/60 text-white focus:outline-none focus:border-[#D9B66D]"
                               />
                             </div>
                             <button
