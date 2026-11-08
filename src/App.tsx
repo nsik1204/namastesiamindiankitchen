@@ -695,7 +695,6 @@ export default function App() {
   /* ------------------------------ UI ------------------------------ */
   const { language, setLanguage, t, getDishName, getDishDescription, getCategoryLabel } = useLanguage();
   const [activeCategory, setActiveCategory] = useState<string>('all');
-  const [dietaryFilter, setDietaryFilter] = useState<'all' | 'veg' | 'nonveg' | 'jain' | 'halal'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
   const [selectedInfoType, setSelectedInfoType] =
@@ -796,33 +795,6 @@ export default function App() {
     [searchQuery, getDishName, getDishDescription]
   );
 
-  const matchesDietary = useCallback(
-    (d: Dish) => {
-      if (dietaryFilter === 'all') return true;
-      if (dietaryFilter === 'veg') return d.type === 'veg' || d.veg === true;
-      if (dietaryFilter === 'nonveg') return d.type === 'nonveg' || d.veg === false;
-      if (dietaryFilter === 'jain') {
-        const ing = (d.ingredients || []).map((i) => i.toLowerCase()).join(' ');
-        const name = d.name.toLowerCase();
-        const desc = d.description.toLowerCase();
-        const hasOnionGarlic =
-          ing.includes('onion') ||
-          ing.includes('garlic') ||
-          name.includes('pyaz') ||
-          name.includes('onion') ||
-          name.includes('garlic') ||
-          desc.includes('onion') ||
-          desc.includes('garlic');
-        return (d.type === 'veg' || d.veg) && !hasOnionGarlic;
-      }
-      if (dietaryFilter === 'halal') {
-        return true;
-      }
-      return true;
-    },
-    [dietaryFilter]
-  );
-
   const inCategory = useCallback(
     (d: Dish) => {
       if (activeCategory === 'all') return true;
@@ -913,33 +885,33 @@ export default function App() {
   const chefRecommendations = useMemo(
     () =>
       activeDishes
-        .filter((d) => d.chefSpecial && inCategory(d) && matchesQuery(d) && matchesDietary(d))
+        .filter((d) => d.chefSpecial && inCategory(d) && matchesQuery(d))
         .sort((a, b) => (a.display_order_chef || 0) - (b.display_order_chef || 0)),
-    [activeDishes, inCategory, matchesQuery, matchesDietary]
+    [activeDishes, inCategory, matchesQuery]
   );
 
   const menuDishes = useMemo(
     () =>
       activeDishes
-        .filter((d) => inCategory(d) && matchesQuery(d) && matchesDietary(d))
+        .filter((d) => inCategory(d) && matchesQuery(d))
         .sort((a, b) => (a.display_order || 0) - (b.display_order || 0)),
-    [activeDishes, inCategory, matchesQuery, matchesDietary]
+    [activeDishes, inCategory, matchesQuery]
   );
 
   const popularDishes = useMemo(
     () =>
       activeDishes
-        .filter((d) => d.bestseller && inCategory(d) && matchesQuery(d) && matchesDietary(d))
+        .filter((d) => d.bestseller && inCategory(d) && matchesQuery(d))
         .sort((a, b) => (a.display_order_popular || 0) - (b.display_order_popular || 0)),
-    [activeDishes, inCategory, matchesQuery, matchesDietary]
+    [activeDishes, inCategory, matchesQuery]
   );
 
   const favoriteDishes = useMemo(
     () =>
       activeDishes
-        .filter((d) => d.customerFavorite && inCategory(d) && matchesQuery(d) && matchesDietary(d))
+        .filter((d) => d.customerFavorite && inCategory(d) && matchesQuery(d))
         .sort((a, b) => (a.display_order_favorite || 0) - (b.display_order_favorite || 0)),
-    [activeDishes, inCategory, matchesQuery, matchesDietary]
+    [activeDishes, inCategory, matchesQuery]
   );
 
   const sortedCategories = useMemo(
@@ -1614,60 +1586,6 @@ export default function App() {
                   }}
                 >
                   {c.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Smart Dietary Filter Pills */}
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 8,
-              marginTop: 14,
-              paddingTop: 12,
-              borderTop: `1px dashed ${T.line}`,
-            }}
-          >
-            {[
-              { id: 'all', label: t('filterAll') },
-              { id: 'veg', label: t('filterVegOnly') },
-              { id: 'nonveg', label: t('filterNonVegOnly') },
-              { id: 'jain', label: t('filterJain') },
-              { id: 'halal', label: t('filterHalal') },
-            ].map((df) => {
-              const isSelected = dietaryFilter === df.id;
-              let activeBorder = '#D9B66D';
-              let activeBg = 'rgba(217, 182, 109, 0.16)';
-              let activeColor = '#30251E';
-              if (df.id === 'veg') {
-                activeBorder = '#386B4D';
-                activeBg = 'rgba(56, 107, 77, 0.14)';
-                activeColor = '#386B4D';
-              } else if (df.id === 'nonveg') {
-                activeBorder = '#9B4935';
-                activeBg = 'rgba(155, 73, 53, 0.14)';
-                activeColor = '#9B4935';
-              }
-              return (
-                <button
-                  key={`diet-${df.id}`}
-                  type="button"
-                  onClick={() => setDietaryFilter(df.id as any)}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: 999,
-                    fontSize: 12,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    border: `1px solid ${isSelected ? activeBorder : T.line}`,
-                    background: isSelected ? activeBg : T.paper,
-                    color: isSelected ? activeColor : T.muted,
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {df.label}
                 </button>
               );
             })}
