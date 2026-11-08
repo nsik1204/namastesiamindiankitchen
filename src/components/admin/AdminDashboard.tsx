@@ -860,7 +860,7 @@ export default function AdminDashboard({
       <div className="flex-1 pt-16 flex flex-col md:flex-row">
         
         {/* Left Side Tab Navigator Panel */}
-        <aside className="w-full md:w-64 bg-[#FFF9EF] border-r border-b md:border-b-0 border-[#E4D7BF] p-3 md:p-4 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-y-auto md:sticky md:top-16 md:h-[calc(100vh-64px)] shrink-0">
+        <aside className="w-full md:w-72 bg-[#FFF9EF] border-r border-b md:border-b-0 border-[#E4D7BF] p-3 md:p-4 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-y-auto md:sticky md:top-16 md:h-[calc(100vh-64px)] shrink-0 font-body">
           <div className="text-xs font-bold text-[#B58C45] uppercase tracking-wider px-3 py-1 mb-1 hidden md:block">
             Consoles
           </div>
@@ -868,79 +868,79 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('overview')}
-            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all whitespace-nowrap ${
               activeTab === 'overview' 
                 ? 'bg-[#173D32] text-[#FFF9EF] shadow-md font-bold border border-[#D9B66D]/40' 
                 : 'text-[#30251E] hover:bg-[#173D32]/10 hover:text-[#173D32]'
             }`}
           >
             <LayoutDashboard className="w-4 h-4 shrink-0" />
-            Command Overview
+            <span>Command Overview</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('dishes')}
-            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all whitespace-nowrap ${
               activeTab === 'dishes' 
                 ? 'bg-[#173D32] text-[#FFF9EF] shadow-md font-bold border border-[#D9B66D]/40' 
                 : 'text-[#30251E] hover:bg-[#173D32]/10 hover:text-[#173D32]'
             }`}
           >
             <UtensilsCrossed className="w-4 h-4 shrink-0" />
-            Cuisine Catalog
+            <span>Cuisine Catalog</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('categories')}
-            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all whitespace-nowrap ${
               activeTab === 'categories' 
                 ? 'bg-[#173D32] text-[#FFF9EF] shadow-md font-bold border border-[#D9B66D]/40' 
                 : 'text-[#30251E] hover:bg-[#173D32]/10 hover:text-[#173D32]'
             }`}
           >
             <Tag className="w-4 h-4 shrink-0" />
-            Menu Categories
+            <span>Menu Categories</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('restaurant')}
-            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all whitespace-nowrap ${
               activeTab === 'restaurant' 
                 ? 'bg-[#173D32] text-[#FFF9EF] shadow-md font-bold border border-[#D9B66D]/40' 
                 : 'text-[#30251E] hover:bg-[#173D32]/10 hover:text-[#173D32]'
             }`}
           >
             <Store className="w-4 h-4 shrink-0" />
-            Brand Profile & Story
+            <span>Brand Profile & Story</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('chat')}
-            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all whitespace-nowrap ${
               activeTab === 'chat' 
                 ? 'bg-[#173D32] text-[#FFF9EF] shadow-md font-bold border border-[#D9B66D]/40' 
                 : 'text-[#30251E] hover:bg-[#173D32]/10 hover:text-[#173D32]'
             }`}
           >
             <MessageSquare className="w-4 h-4 shrink-0" />
-            WhatsApp & LINE Setup
+            <span>WhatsApp & LINE Setup</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('gallery')}
-            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all whitespace-nowrap ${
               activeTab === 'gallery' 
                 ? 'bg-[#173D32] text-[#FFF9EF] shadow-md font-bold border border-[#D9B66D]/40' 
                 : 'text-[#30251E] hover:bg-[#173D32]/10 hover:text-[#173D32]'
             }`}
           >
             <ImageIcon className="w-4 h-4 shrink-0" />
-            Ambience Gallery
+            <span>Ambience Gallery</span>
           </button>
 
           <div className="border-t border-[#E4D7BF] my-3 pt-3 px-1 hidden md:block">
@@ -1044,7 +1044,7 @@ export default function AdminDashboard({
                       {dishes.slice(0, 10).map(dish => (
                         <tr key={dish.id} className="hover:bg-[#F8EEDB]/60 transition-colors">
                           <td className="py-3 px-4 font-semibold text-[#30251E] truncate max-w-[200px]">
-                            <div className="font-semibold text-sm text-[#30251E]">{dish.name}</div>
+                            <div className="font-display font-bold text-sm text-[#30251E]">{dish.name}</div>
                             <span className="text-[11px] font-semibold text-[#B58C45] tracking-wide uppercase mt-0.5 block">
                               {dish.category}
                             </span>
@@ -1521,8 +1521,8 @@ export default function AdminDashboard({
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <h4 className="font-bold text-sm text-[#30251E] truncate">{dish.name}</h4>
-                          <span className="font-bold text-[#173D32] text-xs shrink-0">฿{dish.priceTHB}</span>
+                          <h4 className="font-display font-bold text-sm text-[#173D32] truncate">{dish.name}</h4>
+                          <span className="font-display font-bold text-[#173D32] text-sm shrink-0">฿{dish.priceTHB}</span>
                         </div>
                         <p className="text-xs text-[#75685A] line-clamp-2 mt-0.5">{dish.description}</p>
                         
@@ -1741,7 +1741,7 @@ export default function AdminDashboard({
                       >
                         <div className="flex justify-between items-start w-full">
                           <div>
-                            <h4 className="font-bold text-sm text-[#30251E]">{cat.label}</h4>
+                            <h4 className="font-display font-bold text-sm text-[#173D32]">{cat.label}</h4>
                             <span className="text-xs text-[#173D32] block font-semibold">ID: {cat.id}</span>
                             <span className="text-xs text-[#75685A] block mt-0.5">{count} dishes linked</span>
                             <div className="mt-2 flex items-center gap-1.5">
@@ -1925,7 +1925,7 @@ export default function AdminDashboard({
                 </div>
 
                 <div className="border-t border-[#E4D7BF] my-4 pt-4">
-                  <h4 className="text-sm font-bold text-[#30251E] mb-3 flex items-center gap-1.5">
+                  <h4 className="font-display text-sm font-bold text-[#173D32] mb-3 flex items-center gap-1.5">
                     <BookOpen className="w-4 h-4 text-[#173D32]" />
                     Culinary Heritage Story
                   </h4>
@@ -2018,7 +2018,7 @@ export default function AdminDashboard({
                 {/* CONTACT CHANNEL ACTIVE STATE CONTROLLER */}
                 <div className="bg-[#F8EEDB] p-5 rounded-2xl border border-[#E4D7BF] space-y-3.5">
                   <div>
-                    <h4 className="text-[#30251E] font-bold text-sm">Active Channels</h4>
+                    <h4 className="font-display text-[#173D32] font-bold text-sm">Active Channels</h4>
                     <p className="text-xs text-[#75685A] font-normal mt-0.5">
                       Select which direct communication channels are displayed to website visitors.
                     </p>
@@ -2369,7 +2369,7 @@ export default function AdminDashboard({
               {/* GALLERY IMAGES PREVIEW COLLAGE AND PURGER */}
               <div className="lg:col-span-7 bg-[#FFF9EF] p-5 rounded-2xl border border-[#E4D7BF] shadow-[0_4px_16px_rgba(23,61,50,0.06)] flex flex-col min-h-[520px] h-[calc(100vh-220px)] max-h-[700px]">
                 <div className="pb-3 border-b border-[#E4D7BF]">
-                  <h3 className="font-bold text-base text-[#30251E]">Gallery Assets ({gallery.length})</h3>
+                  <h3 className="font-display font-bold text-base text-[#173D32]">Gallery Assets ({gallery.length})</h3>
                   <p className="text-xs text-[#75685A] mt-0.5">Live photos featured in the public website ambience gallery section.</p>
                 </div>
 
