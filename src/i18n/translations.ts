@@ -137,6 +137,24 @@ export const UI_TRANSLATIONS = {
     prevPhoto: 'Previous Photo',
     viewInstagram: 'View moments on Instagram',
     clickToEnlarge: 'Click to expand image',
+
+    // Find Us & Google Maps
+    findUsLead: 'Find Us',
+    findUsAccent: '& Location',
+    openNow: 'Open Now',
+    closedNow: 'Closed Now',
+    operatingHoursToday: '11:00 AM – 11:00 PM',
+    getDirections: 'Get Directions',
+    callUs: 'Call Restaurant',
+    chatWhatsApp: 'Chat on WhatsApp',
+    addressTitle: 'Restaurant Address',
+    hoursTitle: 'Operating Hours',
+    hoursDaily: 'Monday – Sunday: 11:00 AM – 11:00 PM',
+    diningStyleTitle: 'Dining Style',
+    socialProofRating: '4.8 ★★★★★ (500+ Verified Customer Reviews)',
+    copyAddress: 'Copy Address',
+    addressCopied: 'Copied!',
+    interactiveMapTitle: 'Interactive Location Map',
   },
   th: {
     // Nav
@@ -274,6 +292,24 @@ export const UI_TRANSLATIONS = {
     prevPhoto: 'ภาพก่อนหน้า',
     viewInstagram: 'ชมภาพบรรยากาศเพิ่มเติมบน Instagram',
     clickToEnlarge: 'คลิกเพื่อดูภาพขนาดเต็ม',
+
+    // Find Us & Google Maps
+    findUsLead: 'ค้นหาเรา',
+    findUsAccent: '& แผนที่การเดินทาง',
+    openNow: 'เปิดให้บริการ',
+    closedNow: 'ปิดให้บริการ',
+    operatingHoursToday: '11:00 น. – 23:00 น.',
+    getDirections: 'นำทางไปยังร้าน',
+    callUs: 'โทรติดต่อร้าน',
+    chatWhatsApp: 'แชททาง WhatsApp',
+    addressTitle: 'ที่อยู่ร้าน',
+    hoursTitle: 'เวลาเปิดให้บริการ',
+    hoursDaily: 'วันจันทร์ – วันอาทิตย์: 11:00 น. – 23:00 น.',
+    diningStyleTitle: 'สไตล์การรับประทาน',
+    socialProofRating: '4.8 ★★★★★ (รีวิวจากลูกค้ากว่า 500+ คน)',
+    copyAddress: 'คัดลอกที่อยู่',
+    addressCopied: 'คัดลอกแล้ว!',
+    interactiveMapTitle: 'แผนที่ตำแหน่งร้านแบบโต้ตอบ',
   },
 };
 

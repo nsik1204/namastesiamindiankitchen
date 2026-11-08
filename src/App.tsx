@@ -8,6 +8,7 @@ import OrderDrawer, { CartItem } from './components/ordering/OrderDrawer';
 import ReservationModal from './components/ordering/ReservationModal';
 import FloatingCartPill from './components/ordering/FloatingCartPill';
 import GalleryLightbox from './components/gallery/GalleryLightbox';
+import LocationSection from './components/location/LocationSection';
 import { useLanguage } from './context/LanguageContext';
 
 /* ------------------------------------------------------------------ */
@@ -1764,86 +1765,8 @@ export default function App() {
           </div>
         </section>
 
-        {/* RESTAURANT INFO */}
-        <section id="info" style={sectionStyle}>
-          <SectionTitle lead={t('restaurantInfoLead')} accent={t('restaurantInfoAccent')} />
-
-            <div className="info-grid">
-              <div className="info-card">
-                <h3>📍 Address</h3>
-                <p>
-                  {info.address ? (
-                    <a
-                      href={`https://maps.google.com/?q=${encodeURIComponent('Namaste Siam Indian Kitchen ' + info.address)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {info.address}
-                    </a>
-                  ) : (
-                    'Not available'
-                  )}
-                </p>
-              </div>
-
-              <div className="info-card">
-                <h3>📞 Phone</h3>
-                <p>
-                  {info.phone ? (
-                    <a href={`tel:${info.phone.replace(/[^0-9+]/g, '')}`}>
-                      {info.phone}
-                    </a>
-                  ) : (
-                    'Not available'
-                  )}
-                </p>
-              </div>
-
-              <div className="info-card">
-                <h3>🕒 Opening Hours</h3>
-                <p>{info.openingHours || 'Not available'}</p>
-              </div>
-
-              <div className="info-card">
-                <h3>📷 Instagram</h3>
-                <p>
-                  {info.instagram ? (
-                    <a
-                      href={`https://instagram.com/${info.instagram.replace('@', '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {info.instagram}
-                    </a>
-                  ) : (
-                    'Not available'
-                  )}
-                </p>
-              </div>
-
-              <div className="info-card">
-                <h3>🌐 Website</h3>
-                <p>
-                  {info.website ? (
-                    <a
-                      href={info.website.startsWith('http') ? info.website : `https://${info.website}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {info.website}
-                    </a>
-                  ) : (
-                    'Not available'
-                  )}
-                </p>
-              </div>
-
-              <div className="info-card">
-                <h3>🍽️ Dining Style</h3>
-                <p>{info.diningStyle || 'Not available'}</p>
-              </div>
-            </div>
-          </section>
+        {/* FIND US / GOOGLE MAPS & LOCATION HUB */}
+        <LocationSection info={info} />
 
 
         {/* GALLERY */}
