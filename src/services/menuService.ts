@@ -74,7 +74,7 @@ function mapDishToRow(d: Dish): any {
     display_order_favorite: d.display_order_favorite || 0,
     updated_at: new Date().toISOString()
   };
-  if (d.id !== undefined && d.id !== null && d.id !== '') {
+  if (d.id !== undefined && d.id !== null && typeof d.id === 'number' && !isNaN(d.id)) {
     row.id = d.id;
   }
   return row;
@@ -230,39 +230,31 @@ export const MenuService = {
     return (data || []).map(mapDbDishToDish);
   },
 
-    async saveDish(dish: Dish): Promise<Dish> {
+  async saveDish(dish: Dish): Promise<Dish> {
     const supabase = requireClient();
     const row = mapDishToRow(dish);
     
     let query;
-    // If ID exists, use upsert (update/insert). If no ID, use insert (let DB generate ID).
-    if (row.id !== undefined && row.id !== null && row.id !== '') {
+    if (row.id !== undefined && row.id !== null && typeof row.id === 'number' && !isNaN(row.id)) {
       query = supabase.from('foods').upsert(row, { onConflict: 'id' });
     } else {
-      // Remove id property if it's empty to avoid DB errors
-      delete row.id; 
+      delete row.id;
       query = supabase.from('foods').insert(row);
     }
 
     const { data, error } = await query.select().single();
-    
     if (error) fail(`save dish "${dish.name}"`, error);
     if (!data) throw new Error(`Supabase save dish "${dish.name}" returned no row.`);
     return mapDbDishToDish(data);
   },
 
-  // ✅ FIXED: Single dish save with proper error handling
-  async saveDish(dish: Dish): Promise<Dish> {
+  async saveDishes(dishes: Dish[]): Promise<void> {
     const supabase = requireClient();
-    const row = mapDishToRow(dish);
-    console.log(" Saving dish to DB:", row.name, "ID:", row.id);
-    const { data, error } = await supabase.from('foods').upsert(row, { onConflict: 'id' }).select().single();
-    if (error) {
-      console.error("❌ DB Save Error:", error);
-      fail(`save dish "${dish.name}"`, error);
+    const rows = dishes.map(mapDishToRow);
+    if (rows.length > 0) {
+      const { error } = await supabase.from('foods').upsert(rows, { onConflict: 'id' });
+      if (error) fail('save dishes', error);
     }
-    if (!data) throw new Error(`Supabase save dish "${dish.name}" returned no row.`);
-    return mapDbDishToDish(data);
   },
 
   // ✅ FIXED: Delete with verification

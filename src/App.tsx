@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { MenuService } from './services/menuService';
 import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from './types';
 import DishCard from './components/DishCard';
@@ -13,9 +13,10 @@ const T = {
   paper: '#FFFDF9',
   wine: '#A90E02',
   wineDeep: '#3D1F00',
-  amber: '#E08A2B',
+  amber: '#9A580C',
+  amberGlow: '#E08A2B',
   ink: '#2B1A0E',
-  muted: '#8C7358',
+  muted: '#6B533E',
   line: 'rgba(122,74,34,0.16)',
 };
 
@@ -934,18 +935,7 @@ export default function App() {
 
   const SectionTitle = ({ lead, accent }: { lead: string; accent: string }) => (
     <div style={{ marginBottom: 22 }}>
-      <span
-        style={{
-          fontSize: 10,
-          letterSpacing: '0.2em',
-          textTransform: 'uppercase',
-          color: T.amber,
-          fontWeight: 800,
-        }}
-      >
-        Namaste Siam
-      </span>
-      <h2 style={{ margin: '6px 0 0', fontSize: 30, fontWeight: 800, color: T.ink }}>
+      <h2 style={{ margin: 0, fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 800, color: T.ink, fontFamily: 'var(--font-display, Georgia, serif)' }}>
         {lead} <span style={{ color: T.wine }}>{accent}</span>
       </h2>
     </div>
@@ -986,12 +976,15 @@ export default function App() {
             <ul
               style={{
                 display: 'flex',
-                gap: 20,
+                alignItems: 'center',
+                gap: 'clamp(10px, 2.5vw, 20px)',
                 listStyle: 'none',
                 margin: 0,
                 padding: 0,
                 fontSize: 13,
                 fontWeight: 700,
+                overflowX: 'auto',
+                maxWidth: '100%',
               }}
             >
               <li>
@@ -1044,44 +1037,29 @@ export default function App() {
           }}
         >
           <div>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 11,
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.14em',
-                color: T.wine,
-                background: 'rgba(224,138,43,0.12)',
-                border: `1px solid ${T.line}`,
-                borderRadius: 999,
-                padding: '7px 14px',
-              }}
-            >
-              <span
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: 999,
-                  background: T.amber,
-                  display: 'inline-block',
-                }}
-              />
-              Premium dining experience
-            </span>
-
             <h1
               style={{
-                fontSize: 'clamp(34px, 5vw, 54px)',
-                lineHeight: 1.05,
+                fontSize: 'clamp(32px, 4.8vw, 52px)',
+                lineHeight: 1.08,
                 fontWeight: 800,
-                margin: '18px 0 12px',
+                margin: '0 0 14px',
                 color: T.ink,
+                fontFamily: 'var(--font-display, Georgia, serif)',
               }}
             >
-              Experience <em style={{ color: T.wine }}>Authentic Flavours</em>
+              Experience <span style={{ color: T.wine }}>Authentic Flavours</span>
+              <span
+                style={{
+                  display: 'block',
+                  fontSize: 'clamp(14px, 2vw, 17px)',
+                  fontWeight: 600,
+                  color: T.muted,
+                  marginTop: 8,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                Contemporary Indian &amp; Thai Kitchen
+              </span>
             </h1>
             <p style={{ fontSize: 15, color: T.muted, lineHeight: 1.75, maxWidth: 560, margin: 0 }}>
               Crafted fresh. Served with passion. Browse our chef-curated menu of Indian and Thai
@@ -1102,10 +1080,11 @@ export default function App() {
                 ref={searchInputRef}
                 placeholder="Search dishes, ingredients, category…"
                 aria-label="Search menu items"
+                className="field"
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
                   flex: '1 1 240px',
-                  padding: '13px 16px',
+                  padding: '13px 18px',
                   borderRadius: 999,
                   border: `1px solid ${T.line}`,
                   background: T.paper,
@@ -1125,6 +1104,7 @@ export default function App() {
                   fontWeight: 800,
                   fontSize: 13,
                   cursor: 'pointer',
+                  transition: 'opacity 0.2s ease',
                 }}
               >
                 Live menu search
@@ -1134,20 +1114,20 @@ export default function App() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 22 }}>
               {[
                 '⭐ 4.8 Customer Rating',
-                '🍽️ We Serve the best in taste',
+                '🍽️ Authentic Flavours',
                 '🌿 Fresh Ingredients',
-                '🏆 Chef Recommended',
+                '🏆 Chef Curated',
               ].map((s) => (
                 <span
                   key={s}
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 700,
                     color: T.wine,
                     background: T.paper,
                     border: `1px solid ${T.line}`,
                     borderRadius: 999,
-                    padding: '7px 13px',
+                    padding: '7px 14px',
                   }}
                 >
                   {s}
@@ -1376,22 +1356,79 @@ export default function App() {
             <SectionTitle lead="Restaurant" accent="Information" />
 
             <div className="info-grid">
-              {[
-                ['📍 Address', info.address],
-                ['📞 Phone', info.phone],
-                ['🕒 Opening Hours', info.openingHours],
-                ['📷 Instagram', info.instagram],
-                ['🌐 Website', info.website],
-                ['🍽️ Dining Style', info.diningStyle],
-              ].map(([title, value]) => (
-                <div key={title as string} className="info-card">
-                  <h3>{title}</h3>
+              <div className="info-card">
+                <h3>📍 Address</h3>
+                <p>
+                  {info.address ? (
+                    <a
+                      href={`https://maps.google.com/?q=${encodeURIComponent('Namaste Siam Indian Kitchen ' + info.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {info.address}
+                    </a>
+                  ) : (
+                    'Not available'
+                  )}
+                </p>
+              </div>
 
-                  <p>
-                    {value || 'Not available'}
-                  </p>
-                </div>
-              ))}
+              <div className="info-card">
+                <h3>📞 Phone</h3>
+                <p>
+                  {info.phone ? (
+                    <a href={`tel:${info.phone.replace(/[^0-9+]/g, '')}`}>
+                      {info.phone}
+                    </a>
+                  ) : (
+                    'Not available'
+                  )}
+                </p>
+              </div>
+
+              <div className="info-card">
+                <h3>🕒 Opening Hours</h3>
+                <p>{info.openingHours || 'Not available'}</p>
+              </div>
+
+              <div className="info-card">
+                <h3>📷 Instagram</h3>
+                <p>
+                  {info.instagram ? (
+                    <a
+                      href={`https://instagram.com/${info.instagram.replace('@', '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {info.instagram}
+                    </a>
+                  ) : (
+                    'Not available'
+                  )}
+                </p>
+              </div>
+
+              <div className="info-card">
+                <h3>🌐 Website</h3>
+                <p>
+                  {info.website ? (
+                    <a
+                      href={info.website.startsWith('http') ? info.website : `https://${info.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {info.website}
+                    </a>
+                  ) : (
+                    'Not available'
+                  )}
+                </p>
+              </div>
+
+              <div className="info-card">
+                <h3>🍽️ Dining Style</h3>
+                <p>{info.diningStyle || 'Not available'}</p>
+              </div>
             </div>
           </section>
 

@@ -201,8 +201,23 @@ async function startServer() {
   app.listen(PORT, '0.0.0.0', () => { console.log(`Server running on http://0.0.0.0:${PORT}`); });
 }
 
-const currentFile = fileURLToPath(import.meta.url);
-if (process.argv[1] === currentFile && !process.env.VERCEL) {
+const isDirectRun = () => {
+  if (process.env.VERCEL) return false;
+  try {
+    if (typeof __filename !== 'undefined' && process.argv[1]) {
+      return path.resolve(process.argv[1]) === path.resolve(__filename);
+    }
+    const metaUrl = (import.meta as any)?.url;
+    if (metaUrl && process.argv[1]) {
+      return path.resolve(process.argv[1]) === path.resolve(fileURLToPath(metaUrl));
+    }
+  } catch {
+    // fallback
+  }
+  return true;
+};
+
+if (isDirectRun()) {
   startServer();
 }
 

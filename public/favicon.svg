@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="16" fill="#3D1F00"/>
+  <!-- Stylized warm tandoor ember / culinary flame -->
+  <path d="M32 10c-3 8-14 16-14 26 0 9 7 16 14 16s14-7 14-16c0-10-11-18-14-26z" fill="#E08A2B"/>
+  <path d="M32 24c-2 4-8 9-8 15 0 5 4 9 8 9s8-4 8-9c0-6-6-11-8-15z" fill="#F6C464"/>
+  <circle cx="32" cy="42" r="3" fill="#A90E02"/>
+</svg>
+
