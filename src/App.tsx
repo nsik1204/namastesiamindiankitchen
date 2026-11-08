@@ -12,18 +12,25 @@ import LocationSection from './components/location/LocationSection';
 import { useLanguage } from './context/LanguageContext';
 
 /* ------------------------------------------------------------------ */
-/* Warm-paper / tandoor palette (from workspace UI reference)          */
+/* Heritage Indian Palette (Deep Forest Green & Antique Gold)         */
 /* ------------------------------------------------------------------ */
 const T = {
-  milk: '#FDF8F1',
-  paper: '#FFFDF9',
-  wine: '#A90E02',
-  wineDeep: '#3D1F00',
-  amber: '#9A580C',
-  amberGlow: '#E08A2B',
-  ink: '#2B1A0E',
-  muted: '#6B533E',
-  line: 'rgba(122,74,34,0.16)',
+  milk: '#F8EEDB',          // Background: Warm Sand / Ivory
+  paper: '#FFF9EF',         // Surface: Silk Paper
+  primary: '#173D32',       // Deep Forest Green
+  primaryDark: '#102C25',   // Midnight Forest Green
+  primaryLight: '#285747',  // Muted Emerald
+  gold: '#D9B66D',          // Antique Gold
+  goldDark: '#B58C45',      // Burnished Bronze
+  terracotta: '#9B4935',    // Terracotta Indian Spice
+  ink: '#30251E',           // Main Text: Charcoal Dark Brown
+  muted: '#75685A',         // Muted Text: Warm Taupe
+  line: '#E4D7BF',          // Linen Border
+  // Semantic backward compatibility mappings:
+  wine: '#173D32',          // Deep Forest Green replaces legacy wine
+  wineDeep: '#102C25',      // Midnight Forest Green replaces legacy wineDeep
+  amber: '#D9B66D',         // Antique Gold replaces legacy amber
+  amberGlow: '#D9B66D',     // Antique Gold replaces legacy amberGlow
 };
 
 const UNLOCK_PATH = '/unlock-admin';
@@ -72,8 +79,8 @@ function Background() {
           zIndex: 0,
           pointerEvents: 'none',
           background:
-            `radial-gradient(1100px 520px at 12% -8%, rgba(224,138,43,0.18), transparent 60%),` +
-            `radial-gradient(900px 460px at 92% 4%, rgba(122,74,34,0.16), transparent 62%),` +
+            `radial-gradient(1100px 520px at 12% -8%, rgba(217,182,109,0.14), transparent 60%),` +
+            `radial-gradient(900px 460px at 92% 4%, rgba(23,61,50,0.08), transparent 62%),` +
             `linear-gradient(180deg, ${T.milk} 0%, ${T.paper} 55%, ${T.milk} 100%)`,
         }}
       />
@@ -336,9 +343,9 @@ function AdminGate(props: AdminGateProps) {
             style={{
               margin: '0 0 14px',
               fontSize: 12,
-              color: '#9B1C1C',
-              background: 'rgba(155,28,28,0.08)',
-              border: '1px solid rgba(155,28,28,0.2)',
+              color: '#A33C32',
+              background: 'rgba(163,60,50,0.08)',
+              border: '1px solid rgba(163,60,50,0.2)',
               borderRadius: 10,
               padding: '9px 11px',
             }}
@@ -1126,9 +1133,9 @@ export default function App() {
         style={{
           position: 'relative',
           zIndex: 30,
-          background: '#FDECEC',
-          borderBottom: '1px solid #E9B4B4',
-          color: '#7A1F1F',
+          background: '#FDF2F0',
+          borderBottom: '1px solid rgba(163, 60, 50, 0.25)',
+          color: '#A33C32',
           padding: '10px 16px',
           fontSize: 12.5,
           lineHeight: 1.6,
@@ -1181,8 +1188,8 @@ export default function App() {
             top: 0,
             zIndex: 40,
             backdropFilter: 'blur(10px)',
-            background: 'rgba(253,248,241,0.86)',
-            borderBottom: `1px solid ${T.line}`,
+            background: 'rgba(23, 61, 50, 0.95)',
+            borderBottom: '1px solid rgba(217, 182, 109, 0.25)',
           }}
         >
           <nav
@@ -1197,8 +1204,8 @@ export default function App() {
               flexWrap: 'wrap',
             }}
           >
-            <div style={{ fontWeight: 800, fontSize: 18, color: T.wine, letterSpacing: '-0.01em' }}>
-              Namaste Siam <span style={{ color: T.amber }}>Indian Kitchen</span>
+            <div style={{ fontWeight: 800, fontSize: 18, color: '#FFF9EF', letterSpacing: '-0.01em' }}>
+              Namaste Siam <span style={{ color: '#D9B66D' }}>Indian Kitchen</span>
             </div>
             <ul
               style={{
@@ -1215,7 +1222,7 @@ export default function App() {
               }}
             >
               <li>
-                <a href="#menu" style={{ color: T.wine, textDecoration: 'none' }}>
+                <a href="#menu" style={{ color: '#FFF9EF', textDecoration: 'none' }}>
                   {t('navMenu')}
                 </a>
               </li>
@@ -1229,7 +1236,7 @@ export default function App() {
                     border: 'none',
                     padding: 0,
                     font: 'inherit',
-                    color: T.wine,
+                    color: '#FFF9EF',
                     cursor: 'pointer',
                   }}
                 >
@@ -1242,7 +1249,7 @@ export default function App() {
                 ['#gallery', t('navGallery')],
               ].map(([href, label]) => (
                 <li key={href}>
-                  <a href={href} style={{ color: T.wine, textDecoration: 'none' }}>
+                  <a href={href} style={{ color: '#FFF9EF', textDecoration: 'none' }}>
                     {label}
                   </a>
                 </li>
@@ -1255,10 +1262,10 @@ export default function App() {
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  background: 'rgba(122,74,34,0.08)',
+                  background: 'rgba(16, 44, 37, 0.65)',
                   borderRadius: 999,
                   padding: '3px',
-                  border: `1px solid ${T.line}`,
+                  border: '1px solid rgba(217, 182, 109, 0.35)',
                 }}
                 role="group"
                 aria-label="Language switcher"
@@ -1270,8 +1277,8 @@ export default function App() {
                     padding: '4px 10px',
                     borderRadius: 999,
                     border: 'none',
-                    background: language === 'en' ? T.wine : 'transparent',
-                    color: language === 'en' ? T.milk : T.ink,
+                    background: language === 'en' ? '#D9B66D' : 'transparent',
+                    color: language === 'en' ? '#102C25' : '#FFF9EF',
                     fontSize: 11,
                     fontWeight: 800,
                     cursor: 'pointer',
@@ -1288,8 +1295,8 @@ export default function App() {
                     padding: '4px 10px',
                     borderRadius: 999,
                     border: 'none',
-                    background: language === 'th' ? T.wine : 'transparent',
-                    color: language === 'th' ? T.milk : T.ink,
+                    background: language === 'th' ? '#D9B66D' : 'transparent',
+                    color: language === 'th' ? '#102C25' : '#FFF9EF',
                     fontSize: 11,
                     fontWeight: 800,
                     cursor: 'pointer',
@@ -1308,9 +1315,9 @@ export default function App() {
                   style={{
                     padding: '7px 14px',
                     borderRadius: 999,
-                    border: `1px solid ${T.line}`,
-                    background: T.paper,
-                    color: T.wine,
+                    border: '1px solid rgba(217, 182, 109, 0.35)',
+                    background: 'rgba(16, 44, 37, 0.7)',
+                    color: '#FFF9EF',
                     fontSize: 12.5,
                     fontWeight: 800,
                     cursor: 'pointer',
@@ -1322,7 +1329,7 @@ export default function App() {
                 >
                   <span>🛒</span>
                   <span>{totalCartCount}</span>
-                  <span style={{ color: T.amber }}>฿{totalCartTHB}</span>
+                  <span style={{ color: '#D9B66D' }}>฿{totalCartTHB}</span>
                 </button>
               )}
 
@@ -1332,16 +1339,16 @@ export default function App() {
                 style={{
                   padding: '7px 16px',
                   borderRadius: 999,
-                  border: `1px solid ${T.wine}`,
-                  background: T.wine,
-                  color: T.milk,
+                  border: '1px solid #D9B66D',
+                  background: '#D9B66D',
+                  color: '#102C25',
                   fontSize: 12.5,
                   fontWeight: 800,
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  boxShadow: '0 4px 12px rgba(169,14,2,0.18)',
+                  boxShadow: '0 4px 14px rgba(217,182,109,0.3)',
                   transition: 'transform 0.15s ease',
                 }}
               >
@@ -1599,10 +1606,10 @@ export default function App() {
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
-                    border: `1px solid ${active ? T.wine : T.line}`,
-                    background: active ? T.wine : T.paper,
-                    color: active ? T.milk : T.wine,
-                    boxShadow: active ? '0 4px 14px rgba(169,14,2,0.2)' : 'none',
+                    border: `1px solid ${active ? '#173D32' : T.line}`,
+                    background: active ? '#173D32' : T.paper,
+                    color: active ? '#FFF9EF' : T.ink,
+                    boxShadow: active ? '0 4px 14px rgba(23,61,50,0.25)' : 'none',
                     transition: 'all 0.15s ease',
                   }}
                 >
@@ -1631,6 +1638,18 @@ export default function App() {
               { id: 'halal', label: t('filterHalal') },
             ].map((df) => {
               const isSelected = dietaryFilter === df.id;
+              let activeBorder = '#D9B66D';
+              let activeBg = 'rgba(217, 182, 109, 0.16)';
+              let activeColor = '#30251E';
+              if (df.id === 'veg') {
+                activeBorder = '#386B4D';
+                activeBg = 'rgba(56, 107, 77, 0.14)';
+                activeColor = '#386B4D';
+              } else if (df.id === 'nonveg') {
+                activeBorder = '#9B4935';
+                activeBg = 'rgba(155, 73, 53, 0.14)';
+                activeColor = '#9B4935';
+              }
               return (
                 <button
                   key={`diet-${df.id}`}
@@ -1642,9 +1661,9 @@ export default function App() {
                     fontSize: 12,
                     fontWeight: 700,
                     cursor: 'pointer',
-                    border: `1px solid ${isSelected ? T.amber : T.line}`,
-                    background: isSelected ? 'rgba(154,88,12,0.12)' : T.paper,
-                    color: isSelected ? T.amber : T.muted,
+                    border: `1px solid ${isSelected ? activeBorder : T.line}`,
+                    background: isSelected ? activeBg : T.paper,
+                    color: isSelected ? activeColor : T.muted,
                     transition: 'all 0.15s ease',
                   }}
                 >
@@ -1752,7 +1771,7 @@ export default function App() {
                     fontSize: 12,
                     fontWeight: 700,
                     color: T.wine,
-                    background: 'rgba(224,138,43,0.1)',
+                    background: 'rgba(217,182,109,0.12)',
                     border: `1px solid ${T.line}`,
                     borderRadius: 999,
                     padding: '8px 14px',
@@ -1800,7 +1819,7 @@ export default function App() {
                     cursor: 'pointer',
                     border: `1px solid ${T.line}`,
                     gridRow: g.tall ? 'span 2' : 'span 1',
-                    boxShadow: '0 8px 24px rgba(61,31,0,0.06)',
+                    boxShadow: '0 8px 24px rgba(48,37,30,0.06)',
                   }}
                   className="group"
                   aria-label={`${g.alt || g.title || 'Restaurant ambience'} - ${t('clickToEnlarge')}`}
@@ -1822,7 +1841,7 @@ export default function App() {
                     style={{
                       position: 'absolute',
                       inset: 0,
-                      background: 'linear-gradient(to top, rgba(43,26,14,0.7) 0%, transparent 60%)',
+                      background: 'linear-gradient(to top, rgba(16,44,37,0.85) 0%, transparent 60%)',
                       opacity: 0,
                       transition: 'opacity 0.25s ease',
                       display: 'flex',
@@ -1832,10 +1851,10 @@ export default function App() {
                     }}
                     className="group-hover:opacity-100"
                   >
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#FFFDF9' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#FFF9EF' }}>
                       {g.title || g.alt || 'Namaste Siam Ambience'}
                     </span>
-                    <span style={{ fontSize: 10, color: 'rgba(255,253,249,0.8)', marginTop: 2 }}>
+                    <span style={{ fontSize: 10, color: 'rgba(255,249,239,0.85)', marginTop: 2 }}>
                       🔍 {t('clickToEnlarge')}
                     </span>
                   </div>
@@ -1849,8 +1868,9 @@ export default function App() {
         <footer
           style={{
             marginTop: 64,
-            background: T.wineDeep,
-            color: 'rgba(255,248,240,0.86)',
+            background: '#102C25',
+            color: '#FFF9EF',
+            borderTop: '1px solid rgba(217, 182, 109, 0.25)',
             padding: '46px 20px 22px',
           }}
         >
@@ -1864,24 +1884,24 @@ export default function App() {
             }}
           >
             <div>
-              <div style={{ fontSize: 19, fontWeight: 800, color: T.milk }}>
+              <div style={{ fontSize: 19, fontWeight: 800, color: '#D9B66D', fontFamily: 'var(--font-display, Georgia, serif)' }}>
                 {info.name}
               </div>
-              <p style={{ fontSize: 13, lineHeight: 1.75, marginTop: 10 }}>
+              <p style={{ fontSize: 13, lineHeight: 1.75, marginTop: 10, color: 'rgba(255, 249, 239, 0.85)' }}>
                 Premium restaurant menu experience with authentic flavours, elegant ambience and
                 chef-crafted cuisine.
               </p>
             </div>
             <div>
-              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: T.milk }}>Restaurant</h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0 0', fontSize: 13 }}>
+              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#D9B66D' }}>Restaurant</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0 0', fontSize: 13, color: 'rgba(255, 249, 239, 0.85)' }}>
                 <li style={{ marginBottom: 8 }}>📍 {info.address}</li>
                 <li style={{ marginBottom: 8 }}>📞 {info.phone}</li>
                 <li>🕒 {info.openingHours}</li>
               </ul>
             </div>
             <div>
-              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: T.milk }}>Links</h4>
+              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#D9B66D' }}>Links</h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0 0', fontSize: 13 }}>
                 {(['about', 'contact', 'privacy', 'terms'] as const).map((t) => (
                   <li key={t} style={{ marginBottom: 8 }}>
@@ -1892,10 +1912,13 @@ export default function App() {
                         background: 'none',
                         border: 'none',
                         padding: 0,
-                        color: 'rgba(255,248,240,0.78)',
+                        color: 'rgba(255, 249, 239, 0.85)',
                         cursor: 'pointer',
                         fontSize: 13,
+                        transition: 'color 0.15s ease',
                       }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#D9B66D')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 249, 239, 0.85)')}
                     >
                       {t === 'about'
                         ? 'About'
@@ -1915,9 +1938,10 @@ export default function App() {
               maxWidth: 1180,
               margin: '30px auto 0',
               paddingTop: 16,
-              borderTop: '1px solid rgba(255,248,240,0.14)',
+              borderTop: '1px solid rgba(217, 182, 109, 0.2)',
               fontSize: 12,
-              opacity: 0.75,
+              opacity: 0.8,
+              color: 'rgba(255, 249, 239, 0.75)',
             }}
           >
             © {new Date().getFullYear()} {info.name}. All rights reserved.
@@ -1938,7 +1962,7 @@ export default function App() {
             position: 'fixed',
             inset: 0,
             zIndex: 90,
-            background: 'rgba(43,26,14,0.55)',
+            background: 'rgba(16,44,37,0.65)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1955,7 +1979,8 @@ export default function App() {
               overflowY: 'auto',
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              boxShadow: '0 28px 70px rgba(43,26,14,0.35)',
+              boxShadow: '0 28px 70px rgba(16,44,37,0.35)',
+              border: `1px solid ${T.line}`,
             }}
           >
             <img
@@ -1980,9 +2005,9 @@ export default function App() {
                     fontWeight: 800,
                     borderRadius: 999,
                     padding: '6px 12px',
-                    color: selectedDish.type === 'veg' ? '#166534' : '#9B1C1C',
+                    color: selectedDish.type === 'veg' ? '#386B4D' : '#9B4935',
                     background:
-                      selectedDish.type === 'veg' ? 'rgba(22,101,52,0.1)' : 'rgba(155,28,28,0.1)',
+                      selectedDish.type === 'veg' ? 'rgba(56,107,77,0.12)' : 'rgba(155,73,53,0.12)',
                   }}
                 >
                   {selectedDish.type === 'veg' ? t('veg') : t('nonVeg')}
@@ -1994,8 +2019,8 @@ export default function App() {
                       fontWeight: 800,
                       borderRadius: 999,
                       padding: '6px 12px',
-                      color: T.wine,
-                      background: 'rgba(224,138,43,0.12)',
+                      color: '#9B4935',
+                      background: 'rgba(155,73,53,0.12)',
                     }}
                   >
                     {selectedDish.spiceLevel}
@@ -2025,7 +2050,7 @@ export default function App() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
-                    boxShadow: '0 4px 12px rgba(169,14,2,0.22)',
+                    boxShadow: '0 4px 12px rgba(23,61,50,0.25)',
                   }}
                 >
                   <span>{t('addToOrder')}</span>
@@ -2064,7 +2089,7 @@ export default function App() {
             position: 'fixed',
             inset: 0,
             zIndex: 90,
-            background: 'rgba(43,26,14,0.55)',
+            background: 'rgba(16,44,37,0.65)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

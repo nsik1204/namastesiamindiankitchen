@@ -4,34 +4,49 @@
   --font-display: "Fraunces", Georgia, "Times New Roman", serif;
   --font-body: "DM Sans", "Instrument Sans", "Avenir Next", "Segoe UI", sans-serif;
 
-  --color-ink: #2b1a0e;
-  --color-ink2: #1f150c;
-  --color-coal: #281a10;
-  --color-bark: #352415;
-  --color-line: rgba(122, 74, 34, 0.16);
-  --color-cream: #fdf8f1;
-  --color-milk: #fff4dc;
-  --color-sand: #c9b28f;
-  --color-husk: #8f7a5b;
-  --color-amber: #c27318;
-  --color-amberhi: #e5a33c;
-  --color-wine: #a90e02;
-  --color-sage: #9aa46d;
-  --color-danger: #9b1c1c;
-  --color-ok: #166534;
+  --color-primary: #173d32;
+  --color-primary-dark: #102c25;
+  --color-primary-light: #285747;
+  --color-gold: #d9b66d;
+  --color-gold-dark: #b58c45;
+  --color-terracotta: #9b4935;
+  --color-background: #f8eedb;
+  --color-surface: #fff9ef;
+  --color-main: #30251e;
+  --color-muted: #75685a;
+  --color-border: #e4d7bf;
+  --color-success: #386b4d;
+  --color-error: #a33c32;
+
+  /* Legacy semantic mappings for seamless token consistency */
+  --color-ink: #30251e;
+  --color-ink2: #102c25;
+  --color-coal: #102c25;
+  --color-bark: #30251e;
+  --color-line: #e4d7bf;
+  --color-cream: #f8eedb;
+  --color-milk: #fff9ef;
+  --color-sand: #e4d7bf;
+  --color-husk: #75685a;
+  --color-amber: #d9b66d;
+  --color-amberhi: #d9b66d;
+  --color-wine: #173d32;
+  --color-sage: #386b4d;
+  --color-danger: #a33c32;
+  --color-ok: #386b4d;
 }
 
 html {
   scroll-behavior: smooth;
-  background: #fdf8f1;
+  background: #f8eedb;
   font-size: 16px;
 }
 
 body {
   min-width: 320px;
   margin: 0;
-  background-color: #fdf8f1;
-  color: #2b1a0e;
+  background-color: #f8eedb;
+  color: #30251e;
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -80,7 +95,7 @@ textarea {
 ::placeholder,
 input::placeholder,
 textarea::placeholder {
-  color: #6b533e !important;
+  color: #75685a !important;
   opacity: 1 !important;
 }
 
@@ -89,15 +104,15 @@ textarea {
 }
 
 ::selection {
-  background: rgba(229, 163, 60, 0.35);
-  color: #fdf6e6;
+  background: rgba(217, 182, 109, 0.35);
+  color: #102c25;
 }
 
 /* ---------- scrollbar ---------- */
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #47311b transparent;
+  scrollbar-color: #173d32 transparent;
 }
 
 *::-webkit-scrollbar {
@@ -106,12 +121,12 @@ textarea {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #47311b;
+  background: #173d32;
   border-radius: 99px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #8f7a5b;
+  background: #285747;
 }
 
 *::-webkit-scrollbar-track {
@@ -135,9 +150,9 @@ textarea {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(52rem 36rem at 12% -6%, rgba(229, 163, 60, 0.13), transparent 62%),
-    radial-gradient(44rem 30rem at 96% 18%, rgba(168, 75, 50, 0.12), transparent 60%),
-    radial-gradient(60rem 46rem at 50% 118%, rgba(229, 163, 60, 0.08), transparent 64%);
+    radial-gradient(52rem 36rem at 12% -6%, rgba(217, 182, 109, 0.12), transparent 62%),
+    radial-gradient(44rem 30rem at 96% 18%, rgba(23, 61, 50, 0.08), transparent 60%),
+    radial-gradient(60rem 46rem at 50% 118%, rgba(217, 182, 109, 0.07), transparent 64%);
 }
 
 /* ---------- ember particles ---------- */
@@ -168,9 +183,9 @@ textarea {
   border-radius: 999px;
   background: radial-gradient(
     circle,
-    #f6c464 0%,
-    #e5a33c 45%,
-    rgba(168, 75, 50, 0) 75%
+    #d9b66d 0%,
+    #b58c45 45%,
+    rgba(23, 61, 50, 0) 75%
   );
   filter: blur(0.4px);
   animation: ember-rise linear infinite;
@@ -416,16 +431,16 @@ textarea {
   height: auto;
   overflow: hidden;
 
-  background: #fffdf9;
-  color: #2b1a0e;
-  border: 1px solid rgba(122, 74, 34, 0.16);
+  background: #fff9ef;
+  color: #30251e;
+  border: 1px solid #e4d7bf;
   border-radius: clamp(1rem, 2vw, 1.35rem);
 
   padding: clamp(1rem, 2.2vw, 1.45rem);
 
   box-shadow:
-    0 12px 30px rgba(43, 26, 14, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    0 10px 30px rgba(48, 37, 30, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
 
   transition:
     transform 0.25s ease,
@@ -435,10 +450,10 @@ textarea {
 
 .info-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(224, 138, 43, 0.5);
+  border-color: #d9b66d;
   box-shadow:
-    0 18px 36px rgba(43, 26, 14, 0.15),
-    0 0 0 1px rgba(224, 138, 43, 0.1);
+    0 16px 32px rgba(48, 37, 30, 0.12),
+    0 0 0 1px rgba(217, 182, 109, 0.2);
 }
 
 .info-card > * {
@@ -462,23 +477,23 @@ textarea {
 .info-card h3,
 .info-card h4 {
   margin: 0;
-  color: #a90e02;
+  color: #173d32;
 }
 
 .info-card p {
   margin: 0.5rem 0 0;
-  color: #8c7358;
+  color: #75685a;
   line-height: 1.7;
 }
 
 .info-card a {
-  color: #a90e02;
+  color: #173d32;
   text-decoration: none;
   text-underline-offset: 3px;
 }
 
 .info-card a:hover {
-  color: #e08a2b;
+  color: #b58c45;
   text-decoration: underline;
 }
 
@@ -495,17 +510,17 @@ textarea {
   flex: 1;
   min-width: 1rem;
   margin: 0 0.6rem 0.35rem;
-  border-bottom: 1px dotted rgba(201, 178, 143, 0.4);
+  border-bottom: 1px dotted rgba(228, 215, 191, 0.6);
 }
 
 .field {
   width: 100%;
-  border: 1px solid rgba(71, 49, 27, 0.9);
+  border: 1px solid #e4d7bf;
   border-radius: 0.55rem;
   outline: none;
-  background: rgba(24, 15, 8, 0.7);
+  background: #fff9ef;
   padding: 0.62rem 0.8rem;
-  color: var(--color-cream);
+  color: #30251e;
   font-size: 0.9rem;
   transition:
     border-color 0.2s ease,
@@ -513,21 +528,21 @@ textarea {
 }
 
 .field::placeholder {
-  color: rgba(143, 122, 91, 0.75);
+  color: #75685a;
 }
 
 .field:focus {
-  border-color: rgba(229, 163, 60, 0.75);
-  box-shadow: 0 0 0 3px rgba(229, 163, 60, 0.14);
+  border-color: #173d32;
+  box-shadow: 0 0 0 3px rgba(217, 182, 109, 0.35);
 }
 
 .field-error {
-  border-color: rgba(221, 112, 89, 0.8) !important;
+  border-color: #a33c32 !important;
 }
 
 select.field option {
-  background: #281a10;
-  color: #f3e7d0;
+  background: #fff9ef;
+  color: #30251e;
 }
 
 .tabular {
@@ -587,11 +602,11 @@ select.field option {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  border: 1px solid rgba(122, 74, 34, 0.18);
+  border: 1px solid #e4d7bf;
   border-radius: 22px;
-  background: #fffdf9;
-  color: #2b1a0e;
-  box-shadow: 0 10px 30px rgba(61, 31, 0, 0.08);
+  background: #fff9ef;
+  color: #30251e;
+  box-shadow: 0 10px 30px rgba(48, 37, 30, 0.07);
   cursor: pointer;
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
   outline: none;
@@ -599,12 +614,12 @@ select.field option {
 
 .dish-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(224, 138, 43, 0.6);
-  box-shadow: 0 18px 36px rgba(61, 31, 0, 0.15);
+  border-color: #d9b66d;
+  box-shadow: 0 18px 36px rgba(48, 37, 30, 0.12);
 }
 
 .dish-card:focus-visible {
-  box-shadow: 0 0 0 4px rgba(224, 138, 43, 0.35), 0 18px 36px rgba(61, 31, 0, 0.15);
+  box-shadow: 0 0 0 4px rgba(217, 182, 109, 0.4), 0 18px 36px rgba(48, 37, 30, 0.12);
 }
 
 .dish-img {
@@ -612,7 +627,7 @@ select.field option {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  background: #eadfce;
+  background: #e4d7bf;
 }
 
 .dish-body {
@@ -630,7 +645,7 @@ select.field option {
 }
 
 .dish-name {
-  color: #2b1a0e;
+  color: #30251e;
   font-family: var(--font-display);
   font-size: clamp(1.12rem, 2vw, 1.38rem);
   font-weight: 800;
@@ -639,7 +654,7 @@ select.field option {
 
 .dish-price {
   flex: none;
-  color: #a90e02;
+  color: #173d32;
   font-size: 1.25rem;
   font-weight: 800;
   line-height: 1.2;
@@ -648,7 +663,7 @@ select.field option {
 
 .dish-desc {
   min-height: 1.35em;
-  color: #735b43;
+  color: #75685a;
   font-size: 0.93rem;
   line-height: 1.5;
 }
@@ -674,25 +689,25 @@ select.field option {
 
 .badge {
   padding: 7px 10px;
-  background: rgba(224, 138, 43, 0.13);
-  color: #8b4b13;
+  background: rgba(217, 182, 109, 0.16);
+  color: #30251e;
 }
 
 .badge.green {
-  background: rgba(22, 101, 52, 0.12);
-  color: #166534;
+  background: rgba(56, 107, 77, 0.12);
+  color: #386b4d;
 }
 
 .spice {
   padding: 7px 10px;
-  background: rgba(169, 14, 2, 0.08);
-  color: #a90e02;
+  background: rgba(155, 73, 53, 0.12);
+  color: #9b4935;
 }
 
 .ingredient {
   padding: 6px 9px;
-  border: 1px solid rgba(122, 74, 34, 0.15);
-  color: #735b43;
+  border: 1px solid #e4d7bf;
+  color: #75685a;
   font-size: 0.75rem;
   font-weight: 600;
 }

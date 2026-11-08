@@ -17,10 +17,10 @@ export default function FloatingCartPill({ totalCount, totalTHB, onClick }: Floa
       <button
         type="button"
         onClick={onClick}
-        className="w-full md:w-auto bg-[#A90E02] hover:bg-[#8A0B02] text-[#FFFDF9] py-3.5 px-6 rounded-full shadow-[0_12px_32px_rgba(169,14,2,0.35)] flex items-center justify-between md:justify-start gap-4 transition-all duration-200 hover:scale-[1.02] border border-[#FFFDF9]/20"
+        className="w-full md:w-auto bg-[#173D32] hover:bg-[#102C25] text-[#FFF9EF] py-3.5 px-6 rounded-full shadow-[0_12px_32px_rgba(16,44,37,0.35)] flex items-center justify-between md:justify-start gap-4 transition-all duration-200 hover:scale-[1.02] border border-[#D9B66D]/30"
       >
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center font-bold text-xs shrink-0">
+          <div className="w-7 h-7 rounded-full bg-[#D9B66D] text-[#102C25] flex items-center justify-center font-bold text-xs shrink-0">
             {totalCount}
           </div>
           <span className="font-bold text-sm tracking-wide">
@@ -31,7 +31,7 @@ export default function FloatingCartPill({ totalCount, totalTHB, onClick }: Floa
         <div className="h-4 w-px bg-white/20 hidden md:block"></div>
 
         <div className="flex items-center gap-2">
-          <span className="font-extrabold text-sm text-[#FFF4DC]">฿{totalTHB} THB</span>
+          <span className="font-extrabold text-sm text-[#D9B66D]">฿{totalTHB} THB</span>
           <ArrowRight className="w-4 h-4 ml-1 opacity-80" />
         </div>
       </button>

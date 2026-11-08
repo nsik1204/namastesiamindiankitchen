@@ -62,18 +62,18 @@ export default function LocationSection({ info }: LocationSectionProps) {
     <section id="info" className="max-w-[1180px] mx-auto px-5 pt-14">
       {/* Section Title */}
       <div className="mb-6">
-        <h2 className="text-[clamp(24px,3.5vw,32px)] font-extrabold text-[#2B1A0E] font-display m-0">
-          {t('findUsLead')} <span className="text-[#A90E02]">{t('findUsAccent')}</span>
+        <h2 className="text-[clamp(24px,3.5vw,32px)] font-extrabold text-[#30251E] font-display m-0">
+          {t('findUsLead')} <span className="text-[#173D32]">{t('findUsAccent')}</span>
         </h2>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         
         {/* Left Card: Verified Details, Actions & Hours (7 Cols) */}
-        <div className="lg:col-span-7 bg-[#FFFDF9] border border-[rgba(122,74,34,0.18)] rounded-3xl p-6 md:p-8 shadow-[0_14px_40px_rgba(61,31,0,0.07)] flex flex-col justify-between space-y-6">
+        <div className="lg:col-span-7 bg-[#FFF9EF] border border-[#E4D7BF] rounded-3xl p-6 md:p-8 shadow-[0_14px_40px_rgba(48,37,30,0.07)] flex flex-col justify-between space-y-6">
           
           {/* Header Status & Social Proof */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[rgba(122,74,34,0.12)]">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#E4D7BF]">
             <div className="flex items-center gap-2">
               <span className="relative flex h-3 w-3">
                 <span
@@ -83,21 +83,21 @@ export default function LocationSection({ info }: LocationSectionProps) {
                 ></span>
                 <span
                   className={`relative inline-flex rounded-full h-3 w-3 ${
-                    isCurrentlyOpen ? 'bg-emerald-600' : 'bg-rose-600'
+                    isCurrentlyOpen ? 'bg-[#386B4D]' : 'bg-[#A33C32]'
                   }`}
                 ></span>
               </span>
               <span
                 className={`text-xs font-bold tracking-wide uppercase ${
-                  isCurrentlyOpen ? 'text-emerald-800' : 'text-rose-800'
+                  isCurrentlyOpen ? 'text-[#386B4D]' : 'text-[#A33C32]'
                 }`}
               >
                 {isCurrentlyOpen ? t('openNow') : t('closedNow')} • {t('operatingHoursToday')}
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5 bg-[#FDF8F1] px-3 py-1 rounded-full border border-[rgba(122,74,34,0.15)] text-[#9A580C] text-xs font-bold">
-              <Star className="w-3.5 h-3.5 fill-[#9A580C] text-[#9A580C]" />
+            <div className="flex items-center gap-1.5 bg-[#F8EEDB] px-3 py-1 rounded-full border border-[#E4D7BF] text-[#75685A] text-xs font-bold">
+              <Star className="w-3.5 h-3.5 fill-[#B58C45] text-[#B58C45]" />
               <span>{t('socialProofRating')}</span>
             </div>
           </div>
@@ -106,14 +106,14 @@ export default function LocationSection({ info }: LocationSectionProps) {
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-start gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[rgba(169,14,2,0.08)] text-[#A90E02] flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-8 h-8 rounded-xl bg-[#173D32]/10 text-[#173D32] flex items-center justify-center shrink-0 mt-0.5">
                   <MapPin className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-sm text-[#2B1A0E] tracking-tight m-0">
+                  <h3 className="font-extrabold text-sm text-[#30251E] tracking-tight m-0">
                     {t('addressTitle')}
                   </h3>
-                  <p className="text-xs md:text-sm text-[#6B533E] font-medium leading-relaxed mt-1">
+                  <p className="text-xs md:text-sm text-[#75685A] font-medium leading-relaxed mt-1">
                     {address}
                   </p>
                 </div>
@@ -122,7 +122,7 @@ export default function LocationSection({ info }: LocationSectionProps) {
               <button
                 type="button"
                 onClick={handleCopyAddress}
-                className="shrink-0 text-xs font-bold text-[#9A580C] hover:text-[#A90E02] bg-[#FDF8F1] hover:bg-white border border-[rgba(122,74,34,0.18)] px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1"
+                className="shrink-0 text-xs font-bold text-[#30251E] hover:text-[#173D32] bg-[#F8EEDB] hover:bg-white border border-[#E4D7BF] px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1"
                 title={t('copyAddress')}
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -137,17 +137,17 @@ export default function LocationSection({ info }: LocationSectionProps) {
               href={googleMapsDirectionsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-[#A90E02] hover:bg-[#8A0B02] text-[#FFFDF9] font-bold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors"
+              className="bg-[#173D32] hover:bg-[#102C25] text-[#FFF9EF] font-bold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors border border-[#D9B66D]/30"
             >
-              <Navigation className="w-4 h-4" />
+              <Navigation className="w-4 h-4 text-[#D9B66D]" />
               <span>{t('getDirections')}</span>
             </a>
 
             <a
               href={`tel:${phone.replace(/[^0-9+]/g, '')}`}
-              className="bg-[#FDF8F1] hover:bg-white border border-[rgba(122,74,34,0.2)] text-[#2B1A0E] font-bold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
+              className="bg-[#F8EEDB] hover:bg-white border border-[#E4D7BF] text-[#30251E] font-bold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
             >
-              <Phone className="w-4 h-4 text-[#A90E02]" />
+              <Phone className="w-4 h-4 text-[#173D32]" />
               <span>{t('callUs')}</span>
             </a>
 
@@ -163,19 +163,19 @@ export default function LocationSection({ info }: LocationSectionProps) {
           </div>
 
           {/* Schedule & Atmosphere Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-[rgba(122,74,34,0.1)] text-xs text-[#6B533E]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-[#E4D7BF] text-xs text-[#75685A]">
             <div className="flex items-start gap-2.5">
-              <Clock className="w-4 h-4 text-[#9A580C] shrink-0 mt-0.5" />
+              <Clock className="w-4 h-4 text-[#173D32] shrink-0 mt-0.5" />
               <div>
-                <strong className="block font-bold text-[#2B1A0E] mb-0.5">{t('hoursTitle')}</strong>
+                <strong className="block font-bold text-[#30251E] mb-0.5">{t('hoursTitle')}</strong>
                 <span>{info.openingHours || t('hoursDaily')}</span>
               </div>
             </div>
 
             <div className="flex items-start gap-2.5">
-              <Utensils className="w-4 h-4 text-[#9A580C] shrink-0 mt-0.5" />
+              <Utensils className="w-4 h-4 text-[#173D32] shrink-0 mt-0.5" />
               <div>
-                <strong className="block font-bold text-[#2B1A0E] mb-0.5">{t('diningStyleTitle')}</strong>
+                <strong className="block font-bold text-[#30251E] mb-0.5">{t('diningStyleTitle')}</strong>
                 <span>{info.diningStyle || 'Premium Casual • Family Friendly • Authentic Taste'}</span>
               </div>
             </div>
@@ -184,8 +184,8 @@ export default function LocationSection({ info }: LocationSectionProps) {
         </div>
 
         {/* Right Card: Responsive Google Maps Interactive Embed (5 Cols) */}
-        <div className="lg:col-span-5 bg-[#FFFDF9] border border-[rgba(122,74,34,0.18)] rounded-3xl p-3 shadow-[0_14px_40px_rgba(61,31,0,0.07)] flex flex-col min-h-[340px] md:min-h-[400px] relative overflow-hidden">
-          <div className="w-full h-full rounded-2xl overflow-hidden relative border border-[rgba(122,74,34,0.12)] flex-1">
+        <div className="lg:col-span-5 bg-[#FFF9EF] border border-[#E4D7BF] rounded-3xl p-3 shadow-[0_14px_40px_rgba(48,37,30,0.07)] flex flex-col min-h-[340px] md:min-h-[400px] relative overflow-hidden">
+          <div className="w-full h-full rounded-2xl overflow-hidden relative border border-[#E4D7BF] flex-1">
             <iframe
               title={t('interactiveMapTitle')}
               src={mapEmbedUrl}
@@ -198,15 +198,15 @@ export default function LocationSection({ info }: LocationSectionProps) {
             ></iframe>
 
             {/* Quick Map Link Pill */}
-            <div className="absolute top-3 right-3 bg-[#FFFDF9]/95 backdrop-blur-xs border border-[rgba(122,74,34,0.2)] rounded-full px-3 py-1 shadow-md">
+            <div className="absolute top-3 right-3 bg-[#FFF9EF]/95 backdrop-blur-xs border border-[#E4D7BF] rounded-full px-3 py-1 shadow-md">
               <a
                 href={googleMapsDirectionsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[11px] font-bold text-[#A90E02] flex items-center gap-1 hover:underline"
+                className="text-[11px] font-bold text-[#173D32] flex items-center gap-1 hover:underline"
               >
                 <span>Google Maps</span>
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="w-3 h-3 text-[#D9B66D]" />
               </a>
             </div>
           </div>
@@ -216,3 +216,4 @@ export default function LocationSection({ info }: LocationSectionProps) {
     </section>
   );
 }
+

@@ -42,8 +42,8 @@ export default function DishCard({ dish, onClick, idPrefix, onAddToCart, cartQua
             loading="lazy"
           />
           {cartQuantity > 0 && (
-            <span className="absolute top-2.5 right-2.5 bg-[#A90E02] text-[#FFFDF9] text-xs font-black px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
-              <Check className="w-3 h-3" /> {cartQuantity}
+            <span className="absolute top-2.5 right-2.5 bg-[#173D32] text-[#FFF9EF] border border-[#D9B66D]/40 text-xs font-black px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
+              <Check className="w-3 h-3 text-[#D9B66D]" /> {cartQuantity}
             </span>
           )}
         </div>
@@ -99,8 +99,8 @@ export default function DishCard({ dish, onClick, idPrefix, onAddToCart, cartQua
             }}
             className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
               cartQuantity > 0
-                ? 'bg-[#FDF3E3] border border-[#E5A33C]/60 text-[#A65B0A] hover:bg-[#FBE9CE]'
-                : 'bg-[#FDF8F1] border border-[rgba(122,74,34,0.22)] text-[#A90E02] hover:bg-[#A90E02] hover:text-[#FFFDF9] hover:border-[#A90E02]'
+                ? 'bg-[#FFF9EF] border border-[#D9B66D] text-[#30251E] hover:bg-[#F8EEDB]'
+                : 'bg-[#FFF9EF] border border-[#E4D7BF] text-[#173D32] hover:bg-[#173D32] hover:text-[#FFF9EF] hover:border-[#173D32]'
             }`}
           >
             <Plus className="w-3.5 h-3.5" />

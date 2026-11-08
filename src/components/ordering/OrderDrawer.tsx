@@ -151,19 +151,19 @@ _Sent via Namaste Siam Digital Menu_`;
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 bg-[#2B1A0E]/60 backdrop-blur-xs flex justify-end animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-[#102C25]/60 backdrop-blur-xs flex justify-end animate-in fade-in duration-200"
     >
-      <div className="bg-[#FFFDF9] w-full max-w-md h-full shadow-[0_0_50px_rgba(43,26,14,0.3)] flex flex-col justify-between font-body text-[#2B1A0E] border-l border-[rgba(122,74,34,0.18)]">
+      <div className="bg-[#FFF9EF] w-full max-w-md h-full shadow-[0_0_50px_rgba(16,44,37,0.35)] flex flex-col justify-between font-body text-[#30251E] border-l border-[#E4D7BF]">
         
         {/* Drawer Header */}
-        <div className="p-5 border-b border-[rgba(122,74,34,0.12)] flex items-center justify-between bg-white shrink-0">
+        <div className="p-5 border-b border-[#E4D7BF] flex items-center justify-between bg-[#FFFDF9] shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[rgba(169,14,2,0.08)] flex items-center justify-center text-[#A90E02]">
+            <div className="w-9 h-9 rounded-xl bg-[#173D32]/10 flex items-center justify-center text-[#173D32]">
               <ShoppingBag className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-extrabold text-base text-[#2B1A0E]">{t('orderTrayTitle')}</h2>
-              <span className="text-xs text-[#735B43] font-medium">
+              <h2 className="font-extrabold text-base text-[#173D32]">{t('orderTrayTitle')}</h2>
+              <span className="text-xs text-[#75685A] font-medium">
                 {totalItemsCount} {t('dishesSelected')}
               </span>
             </div>
@@ -173,7 +173,7 @@ _Sent via Namaste Siam Digital Menu_`;
               <button
                 type="button"
                 onClick={onClearCart}
-                className="text-xs font-semibold text-[#8C7358] hover:text-[#A90E02] transition-colors px-2 py-1"
+                className="text-xs font-semibold text-[#75685A] hover:text-[#173D32] transition-colors px-2 py-1"
                 title={t('clear')}
               >
                 {t('clear')}
@@ -182,7 +182,7 @@ _Sent via Namaste Siam Digital Menu_`;
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-[#FDF8F1] border border-[rgba(122,74,34,0.16)] flex items-center justify-center text-[#735B43] hover:text-[#A90E02] transition-colors"
+              className="w-8 h-8 rounded-full bg-[#F8EEDB] border border-[#E4D7BF] flex items-center justify-center text-[#75685A] hover:text-[#173D32] transition-colors"
               aria-label={t('close')}
             >
               <X className="w-4 h-4" />
@@ -194,8 +194,8 @@ _Sent via Namaste Siam Digital Menu_`;
         <div className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin">
           
           {/* Order Type Toggle Selector */}
-          <div className="bg-[#FDF8F1] p-3.5 rounded-2xl border border-[rgba(122,74,34,0.14)] space-y-2.5">
-            <span className="text-xs font-bold text-[#8C5E2D] uppercase tracking-wider block">
+          <div className="bg-[#F8EEDB] p-3.5 rounded-2xl border border-[#E4D7BF] space-y-2.5">
+            <span className="text-xs font-bold text-[#30251E] uppercase tracking-wider block">
               {t('diningMode')}
             </span>
             <div className="grid grid-cols-3 gap-1.5 text-xs">
@@ -204,8 +204,8 @@ _Sent via Namaste Siam Digital Menu_`;
                 onClick={() => setOrderType('dine_in')}
                 className={`py-2 px-2 rounded-xl font-bold flex flex-col items-center gap-1 transition-all ${
                   orderType === 'dine_in'
-                    ? 'bg-white text-[#A90E02] shadow-xs border border-[#A90E02]/30'
-                    : 'text-[#735B43] hover:bg-white/50'
+                    ? 'bg-white text-[#173D32] shadow-xs border border-[#173D32]/30'
+                    : 'text-[#75685A] hover:bg-white/50'
                 }`}
               >
                 <UtensilsCrossed className="w-3.5 h-3.5" />
@@ -217,8 +217,8 @@ _Sent via Namaste Siam Digital Menu_`;
                 onClick={() => setOrderType('takeaway')}
                 className={`py-2 px-2 rounded-xl font-bold flex flex-col items-center gap-1 transition-all ${
                   orderType === 'takeaway'
-                    ? 'bg-white text-[#A90E02] shadow-xs border border-[#A90E02]/30'
-                    : 'text-[#735B43] hover:bg-white/50'
+                    ? 'bg-white text-[#173D32] shadow-xs border border-[#173D32]/30'
+                    : 'text-[#75685A] hover:bg-white/50'
                 }`}
               >
                 <Package className="w-3.5 h-3.5" />
@@ -230,8 +230,8 @@ _Sent via Namaste Siam Digital Menu_`;
                 onClick={() => setOrderType('delivery')}
                 className={`py-2 px-2 rounded-xl font-bold flex flex-col items-center gap-1 transition-all ${
                   orderType === 'delivery'
-                    ? 'bg-white text-[#A90E02] shadow-xs border border-[#A90E02]/30'
-                    : 'text-[#735B43] hover:bg-white/50'
+                    ? 'bg-white text-[#173D32] shadow-xs border border-[#173D32]/30'
+                    : 'text-[#75685A] hover:bg-white/50'
                 }`}
               >
                 <Bike className="w-3.5 h-3.5" />
@@ -246,7 +246,7 @@ _Sent via Namaste Siam Digital Menu_`;
                   value={tableNumber}
                   onChange={(e) => setTableNumber(e.target.value)}
                   placeholder={t('tableNumberPlaceholder')}
-                  className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
+                  className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
                 />
               </div>
             )}
@@ -258,7 +258,7 @@ _Sent via Namaste Siam Digital Menu_`;
                   value={customerAddress}
                   onChange={(e) => setCustomerAddress(e.target.value)}
                   placeholder={t('deliveryAddressPlaceholder')}
-                  className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
+                  className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
                 />
               </div>
             )}
@@ -266,20 +266,20 @@ _Sent via Namaste Siam Digital Menu_`;
 
           {/* Cart Items List */}
           <div className="space-y-3">
-            <span className="text-xs font-bold text-[#8C5E2D] uppercase tracking-wider block">
+            <span className="text-xs font-bold text-[#30251E] uppercase tracking-wider block">
               {t('itemsInTray')}
             </span>
 
             {cart.length === 0 ? (
-              <div className="py-12 text-center text-[#8C7358] space-y-2">
-                <ShoppingBag className="w-10 h-10 mx-auto text-[#8C7358]/40" />
+              <div className="py-12 text-center text-[#75685A] space-y-2">
+                <ShoppingBag className="w-10 h-10 mx-auto text-[#75685A]/40" />
                 <p className="text-sm font-semibold">{t('emptyTrayTitle')}</p>
-                <p className="text-xs text-[#8C7358]/80 max-w-xs mx-auto">
+                <p className="text-xs text-[#75685A]/80 max-w-xs mx-auto">
                   {t('emptyTraySubtitle')}
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-[rgba(122,74,34,0.08)]">
+              <div className="divide-y divide-[#E4D7BF]/60">
                 {cart.map(({ dish, quantity }) => {
                   const dishTitle = getDishName(dish);
                   return (
@@ -287,39 +287,39 @@ _Sent via Namaste Siam Digital Menu_`;
                       <img
                         src={dish.image}
                         alt={dishTitle}
-                        className="w-12 h-12 rounded-xl object-cover border border-[rgba(122,74,34,0.12)] shrink-0 bg-[#FDF8F1]"
+                        className="w-12 h-12 rounded-xl object-cover border border-[#E4D7BF] shrink-0 bg-[#F8EEDB]"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
                             'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1000&q=80';
                         }}
                       />
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-xs text-[#2B1A0E] truncate">{dishTitle}</h4>
-                        <span className="text-xs font-bold text-[#A90E02]">
+                        <h4 className="font-bold text-xs text-[#30251E] truncate">{dishTitle}</h4>
+                        <span className="text-xs font-bold text-[#173D32]">
                           ฿{dish.priceTHB * quantity}{' '}
-                          <span className="text-[11px] text-[#8C7358] font-normal">
+                          <span className="text-[11px] text-[#75685A] font-normal">
                             (฿{dish.priceTHB} {t('each')})
                           </span>
                         </span>
                       </div>
 
                       {/* Quantity controls */}
-                      <div className="flex items-center gap-1.5 bg-[#FDF8F1] border border-[rgba(122,74,34,0.18)] rounded-lg p-1 shrink-0">
+                      <div className="flex items-center gap-1.5 bg-[#F8EEDB] border border-[#E4D7BF] rounded-lg p-1 shrink-0">
                         <button
                           type="button"
                           onClick={() => onUpdateQuantity(dish.id, -1)}
-                          className="w-5 h-5 rounded flex items-center justify-center text-[#735B43] hover:text-[#A90E02] transition-colors"
+                          className="w-5 h-5 rounded flex items-center justify-center text-[#75685A] hover:text-[#173D32] transition-colors"
                           aria-label="Decrease quantity"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="text-xs font-bold text-[#2B1A0E] w-4 text-center">
+                        <span className="text-xs font-bold text-[#30251E] w-4 text-center">
                           {quantity}
                         </span>
                         <button
                           type="button"
                           onClick={() => onUpdateQuantity(dish.id, 1)}
-                          className="w-5 h-5 rounded flex items-center justify-center text-[#735B43] hover:text-[#A90E02] transition-colors"
+                          className="w-5 h-5 rounded flex items-center justify-center text-[#75685A] hover:text-[#173D32] transition-colors"
                           aria-label="Increase quantity"
                         >
                           <Plus className="w-3 h-3" />
@@ -329,7 +329,7 @@ _Sent via Namaste Siam Digital Menu_`;
                       <button
                         type="button"
                         onClick={() => onRemoveItem(dish.id)}
-                        className="text-[#8C7358] hover:text-rose-600 transition-colors p-1 shrink-0"
+                        className="text-[#75685A] hover:text-rose-600 transition-colors p-1 shrink-0"
                         title="Remove"
                         aria-label="Remove item"
                       >
@@ -345,7 +345,7 @@ _Sent via Namaste Siam Digital Menu_`;
           {/* Customer Details & Notes */}
           {cart.length > 0 && (
             <div className="space-y-3 pt-2">
-              <span className="text-xs font-bold text-[#8C5E2D] uppercase tracking-wider block">
+              <span className="text-xs font-bold text-[#30251E] uppercase tracking-wider block">
                 {t('contactPreferences')}
               </span>
 
@@ -355,14 +355,14 @@ _Sent via Namaste Siam Digital Menu_`;
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   placeholder={t('yourNameOptional')}
-                  className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
+                  className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
                 />
                 <input
                   type="tel"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
                   placeholder={t('phoneWhatsApp')}
-                  className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
+                  className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
                 />
               </div>
 
@@ -372,7 +372,7 @@ _Sent via Namaste Siam Digital Menu_`;
                   onChange={(e) => setSpecialNotes(e.target.value)}
                   placeholder={t('kitchenNotesPlaceholder')}
                   rows={2}
-                  className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2.5 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
+                  className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
                 />
               </div>
             </div>
@@ -380,10 +380,10 @@ _Sent via Namaste Siam Digital Menu_`;
         </div>
 
         {/* Drawer Footer with Subtotal & Instant WhatsApp / LINE Actions */}
-        <div className="p-5 border-t border-[rgba(122,74,34,0.12)] bg-white space-y-3 shrink-0 shadow-lg">
+        <div className="p-5 border-t border-[#E4D7BF] bg-[#FFFDF9] space-y-3 shrink-0 shadow-lg">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-semibold text-[#735B43]">{t('estimatedTotal')}</span>
-            <span className="text-xl font-extrabold text-[#A90E02]">฿{totalTHB} THB</span>
+            <span className="font-semibold text-[#75685A]">{t('estimatedTotal')}</span>
+            <span className="text-xl font-extrabold text-[#173D32]">฿{totalTHB} THB</span>
           </div>
 
           <div className="flex gap-2">
@@ -406,7 +406,7 @@ _Sent via Namaste Siam Digital Menu_`;
               {t('orderOnLine')}
             </button>
           </div>
-          <span className="block text-[10px] text-center text-[#8C7358]">
+          <span className="block text-[10px] text-center text-[#75685A]">
             {t('orderHelpNote')}
           </span>
         </div>

@@ -125,24 +125,24 @@ _Sent via Namaste Siam Digital Menu_`;
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 bg-[#2B1A0E]/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-[#102C25]/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
     >
-      <div className="bg-[#FFFDF9] border border-[rgba(122,74,34,0.18)] rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto shadow-[0_25px_60px_rgba(43,26,14,0.3)] p-6 md:p-8 space-y-5 text-[#2B1A0E] font-body relative">
+      <div className="bg-[#FFF9EF] border border-[#E4D7BF] rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto shadow-[0_25px_60px_rgba(16,44,37,0.35)] p-6 md:p-8 space-y-5 text-[#30251E] font-body relative">
         
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <span className="text-xs font-bold text-[#8C5E2D] uppercase tracking-wider block">
+            <span className="text-xs font-bold text-[#B58C45] uppercase tracking-wider block">
               {t('resModalSubtitle')}
             </span>
-            <h2 className="text-2xl font-extrabold text-[#2B1A0E] tracking-tight font-display mt-0.5">
+            <h2 className="text-2xl font-extrabold text-[#173D32] tracking-tight font-display mt-0.5">
               {t('resModalTitle')}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#FDF8F1] border border-[rgba(122,74,34,0.16)] flex items-center justify-center text-[#735B43] hover:text-[#A90E02] transition-colors"
+            className="w-8 h-8 rounded-full bg-[#F8EEDB] border border-[#E4D7BF] flex items-center justify-center text-[#75685A] hover:text-[#173D32] transition-colors"
             aria-label={t('close')}
           >
             <X className="w-4 h-4" />
@@ -153,9 +153,9 @@ _Sent via Namaste Siam Digital Menu_`;
         {validationError && (
           <div
             role="alert"
-            className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in"
+            className="p-3 rounded-xl bg-[#FDF2F0] border border-[#A33C32]/30 text-[#A33C32] text-xs font-semibold flex items-center gap-2 animate-in fade-in"
           >
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <AlertCircle className="w-4 h-4 text-[#A33C32] shrink-0" />
             <span>{validationError}</span>
           </div>
         )}
@@ -164,7 +164,7 @@ _Sent via Namaste Siam Digital Menu_`;
         <div className="space-y-4 text-xs font-semibold">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">
                 {t('fullNameLabel')}
               </label>
               <input
@@ -175,12 +175,12 @@ _Sent via Namaste Siam Digital Menu_`;
                   if (validationError) setValidationError(null);
                 }}
                 placeholder={t('fullNamePlaceholder')}
-                className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2.5 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
+                className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">
                 {t('phoneLabel')}
               </label>
               <input
@@ -191,7 +191,7 @@ _Sent via Namaste Siam Digital Menu_`;
                   if (validationError) setValidationError(null);
                 }}
                 placeholder={t('phonePlaceholder')}
-                className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2.5 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
+                className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
                 required
               />
             </div>
@@ -199,8 +199,8 @@ _Sent via Namaste Siam Digital Menu_`;
 
           <div className="grid grid-cols-3 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-[#A90E02]" /> {t('dateLabel')}
+              <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-[#173D32]" /> {t('dateLabel')}
               </label>
               <input
                 type="date"
@@ -209,17 +209,17 @@ _Sent via Namaste Siam Digital Menu_`;
                   setDate(e.target.value);
                   if (validationError) setValidationError(null);
                 }}
-                className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
+                className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-[#A90E02]" /> {t('timeLabel')}
+              <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-[#173D32]" /> {t('timeLabel')}
               </label>
               <select
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
+                className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
               >
                 <option value="12:00">12:00 PM</option>
                 <option value="12:30">12:30 PM</option>
@@ -235,13 +235,13 @@ _Sent via Namaste Siam Digital Menu_`;
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1 flex items-center gap-1">
-                <Users className="w-3.5 h-3.5 text-[#A90E02]" /> {t('guestsLabel')}
+              <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Users className="w-3.5 h-3.5 text-[#173D32]" /> {t('guestsLabel')}
               </label>
               <select
                 value={guests}
                 onChange={(e) => setGuests(e.target.value)}
-                className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
+                className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
               >
                 <option value="1">{language === 'th' ? '1 ท่าน' : '1 Person'}</option>
                 <option value="2">{language === 'th' ? '2 ท่าน' : '2 People'}</option>
@@ -257,7 +257,7 @@ _Sent via Namaste Siam Digital Menu_`;
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1.5">
               {t('seatingLabel')}
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -272,8 +272,8 @@ _Sent via Namaste Siam Digital Menu_`;
                   onClick={() => setSeatingArea(seat.id as any)}
                   className={`py-2 px-2.5 rounded-xl border text-xs font-bold transition-all text-center ${
                     seatingArea === seat.id
-                      ? 'bg-[rgba(169,14,2,0.08)] border-[#A90E02] text-[#A90E02] ring-1 ring-[#A90E02]'
-                      : 'bg-white border-[rgba(122,74,34,0.18)] text-[#735B43] hover:bg-[#FDF8F1]'
+                      ? 'bg-[#173D32]/10 border-[#173D32] text-[#173D32] ring-1 ring-[#173D32]'
+                      : 'bg-white border-[#E4D7BF] text-[#75685A] hover:bg-[#F8EEDB]'
                   }`}
                 >
                   {seat.label}
@@ -283,7 +283,7 @@ _Sent via Namaste Siam Digital Menu_`;
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#47311B] uppercase tracking-wider mb-1">
+            <label className="block text-xs font-bold text-[#30251E] uppercase tracking-wider mb-1">
               {t('specialNotesLabel')}
             </label>
             <textarea
@@ -291,14 +291,14 @@ _Sent via Namaste Siam Digital Menu_`;
               onChange={(e) => setSpecialRequest(e.target.value)}
               placeholder={t('specialNotesPlaceholder')}
               rows={2}
-              className="w-full bg-white border border-[rgba(122,74,34,0.2)] rounded-xl p-2.5 text-xs text-[#2B1A0E] focus:outline-none focus:border-[#A90E02]"
+              className="w-full bg-white border border-[#E4D7BF] rounded-xl p-2.5 text-xs text-[#30251E] focus:outline-none focus:border-[#173D32]"
             />
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-2 pt-2 border-t border-[rgba(122,74,34,0.12)]">
-          <span className="block text-[11px] text-center text-[#8C7358]">
+        <div className="space-y-2 pt-2 border-t border-[#E4D7BF]">
+          <span className="block text-[11px] text-center text-[#75685A]">
             {t('resConfirmNote')}
           </span>
           <div className="flex gap-2">

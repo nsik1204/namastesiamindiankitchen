@@ -60,15 +60,15 @@ export default function GalleryLightbox({
       aria-modal="true"
       aria-label="Photo Lightbox"
       onClick={onClose}
-      className="fixed inset-0 z-50 bg-[#2B1A0E]/90 backdrop-blur-md flex flex-col items-center justify-between p-4 md:p-6 animate-in fade-in duration-200 select-none"
+      className="fixed inset-0 z-50 bg-[#102C25]/95 backdrop-blur-md flex flex-col items-center justify-between p-4 md:p-6 animate-in fade-in duration-200 select-none"
     >
       {/* Top Header Controls */}
       <div
-        className="w-full max-w-5xl flex items-center justify-between text-[#FFFDF9] z-10"
+        className="w-full max-w-5xl flex items-center justify-between text-[#FFF9EF] z-10"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3">
-          <span className="text-xs md:text-sm font-bold tracking-wider bg-white/10 px-3 py-1.5 rounded-full border border-white/15">
+          <span className="text-xs md:text-sm font-bold tracking-wider bg-[#D9B66D]/20 text-[#D9B66D] px-3 py-1.5 rounded-full border border-[#D9B66D]/40">
             {t('photoOf')} {currentIndex + 1} {t('of')} {items.length}
           </span>
           <span className="text-xs md:text-sm font-semibold opacity-80 hidden sm:inline">
@@ -96,7 +96,7 @@ export default function GalleryLightbox({
           <button
             type="button"
             onClick={handlePrev}
-            className="absolute left-2 md:-left-4 z-20 w-11 h-11 md:w-13 md:h-13 rounded-full bg-[#2B1A0E]/70 hover:bg-[#A90E02] text-white flex items-center justify-center transition-all shadow-xl hover:scale-110 border border-white/20"
+            className="absolute left-2 md:-left-4 z-20 w-11 h-11 md:w-13 md:h-13 rounded-full bg-[#102C25]/80 hover:bg-[#173D32] text-[#FFF9EF] flex items-center justify-center transition-all shadow-xl hover:scale-110 border border-[#D9B66D]/30 hover:border-[#D9B66D]"
             aria-label={t('prevPhoto')}
           >
             <ChevronLeft className="w-6 h-6" />
@@ -117,7 +117,7 @@ export default function GalleryLightbox({
           <button
             type="button"
             onClick={handleNext}
-            className="absolute right-2 md:-right-4 z-20 w-11 h-11 md:w-13 md:h-13 rounded-full bg-[#2B1A0E]/70 hover:bg-[#A90E02] text-white flex items-center justify-center transition-all shadow-xl hover:scale-110 border border-white/20"
+            className="absolute right-2 md:-right-4 z-20 w-11 h-11 md:w-13 md:h-13 rounded-full bg-[#102C25]/80 hover:bg-[#173D32] text-[#FFF9EF] flex items-center justify-center transition-all shadow-xl hover:scale-110 border border-[#D9B66D]/30 hover:border-[#D9B66D]"
             aria-label={t('nextPhoto')}
           >
             <ChevronRight className="w-6 h-6" />
@@ -139,7 +139,7 @@ export default function GalleryLightbox({
             href={`https://instagram.com/${instagramHandle.replace('@', '')}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-xs font-bold text-[#E08A2B] hover:text-[#FFFDF9] bg-white/5 hover:bg-white/15 px-3 py-1.5 rounded-full border border-[#E08A2B]/30 transition-all shrink-0"
+            className="inline-flex items-center gap-2 text-xs font-bold text-[#D9B66D] hover:text-[#FFF9EF] bg-white/5 hover:bg-white/15 px-3 py-1.5 rounded-full border border-[#D9B66D]/35 transition-all shrink-0"
           >
             <Instagram className="w-3.5 h-3.5" />
             <span>{t('viewInstagram')}</span>
