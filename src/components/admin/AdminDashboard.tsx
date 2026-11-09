@@ -162,6 +162,21 @@ export default function AdminDashboard({
   const [galleryLinkInput, setGalleryLinkInput] = useState<string>('');
   const [isFetchingGalleryLink, setIsFetchingGalleryLink] = useState<boolean>(false);
 
+  // Auto-sync dishes if initially empty due to transient network lag
+  useEffect(() => {
+    if (dishes.length === 0) {
+      MenuService.getDishes()
+        .then((fresh) => {
+          if (fresh && fresh.length > 0) {
+            onUpdateDishes(fresh);
+            showToast(`Loaded ${fresh.length} dishes from database!`, 'info');
+          }
+        })
+        .catch((err) => {
+          console.warn('Auto-sync dishes error:', err);
+        });
+    }
+  }, [dishes.length, onUpdateDishes]);
   // Stats Derived States
   const stats = useMemo(() => {
     const totalDishes = dishes.length;
@@ -905,6 +920,26 @@ export default function AdminDashboard({
               Saving database...
             </span>
           )}
+          <button 
+            type="button"
+            onClick={async () => {
+              setIsSaving(true);
+              try {
+                const fresh = await MenuService.getDishes();
+                onUpdateDishes(fresh);
+                showToast(`Database synced: ${fresh.length} dishes active!`, 'success');
+              } catch (err: any) {
+                showToast('Sync error: ' + (err?.message || 'Database connection error'), 'error');
+              } finally {
+                setIsSaving(false);
+              }
+            }}
+            className="inline-flex items-center gap-1.5 text-xs bg-[#FFF9EF] hover:bg-[#F8EEDB] text-[#173D32] font-semibold py-2 px-3 rounded-full transition-colors border border-[#E4D7BF] shadow-xs cursor-pointer"
+            title="Fetch latest dishes from database"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSaving ? 'animate-spin text-[#B58C45]' : ''}`} />
+            Sync
+          </button>
           <button 
             type="button"
             onClick={onClose}

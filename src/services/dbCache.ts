@@ -47,3 +47,4 @@ export async function setCachedData<T>(key: string, value: T): Promise<void> {
     // Ignore cache write errors
   }
 }
+
