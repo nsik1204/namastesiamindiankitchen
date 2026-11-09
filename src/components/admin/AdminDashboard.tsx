@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MenuService } from "../../services/menuService";
 import { uploadDishImage, fetchImageFromLink } from '../../services/storageService';
 import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from '../../types';
