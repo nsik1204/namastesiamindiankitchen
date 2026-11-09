@@ -710,14 +710,15 @@ export default function AdminDashboard({
   const [isProfileDirty, setIsProfileDirty] = useState<boolean>(false);
 
   useEffect(() => {
-    setProfileForm({ ...restaurantInfo });
-    setAboutForm({
-      story: [...aboutInfo.story],
-      highlights: [...aboutInfo.highlights]
-    });
-    setStoryInput(aboutInfo.story.join('\n'));
-    setIsProfileDirty(false);
-  }, [restaurantInfo, aboutInfo]);
+    if (!isProfileDirty && !isSaving) {
+      setProfileForm({ ...restaurantInfo });
+      setAboutForm({
+        story: [...aboutInfo.story],
+        highlights: [...aboutInfo.highlights]
+      });
+      setStoryInput(aboutInfo.story.join('\n'));
+    }
+  }, [restaurantInfo, aboutInfo, isProfileDirty, isSaving]);
 
   const handleSaveProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -729,14 +730,19 @@ export default function AdminDashboard({
         .map(line => line.trim())
         .filter(line => line.length > 0);
 
-      await onUpdateRestaurantInfo({ ...profileForm });
-      await onUpdateAboutInfo({
-        story: parsedStory,
-        highlights: aboutForm.highlights
-      });
+      const highlightsToSave = [...aboutForm.highlights];
+      const profileToSave = { ...profileForm };
+
+      await Promise.all([
+        onUpdateRestaurantInfo(profileToSave),
+        onUpdateAboutInfo({
+          story: parsedStory,
+          highlights: highlightsToSave
+        })
+      ]);
 
       setIsProfileDirty(false);
-      showToast('Restaurant details and story saved successfully!');
+      showToast('Restaurant details and brand highlights saved successfully!', 'success');
     } catch (err: any) {
       console.error('Failed to save profile details:', err);
       showToast(err?.message || 'Failed to save profile details. Please try again.', 'error');

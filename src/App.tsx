@@ -654,7 +654,19 @@ const EMPTY_RESTAURANT_INFO: RestaurantInfo = {
   contactActiveChannel: 'disabled',
 };
 
-const EMPTY_ABOUT_INFO: AboutInfo = { story: [], highlights: [] };
+const EMPTY_ABOUT_INFO: AboutInfo = {
+  story: [
+    'At Namaste Siam Indian Kitchen, every plate tells a story of heritage, craftsmanship, and passion. Our kitchen celebrates authentic recipes with a contemporary touch, using handpicked produce, premium spices, and balanced flavors that feel both soulful and refined.',
+    'From timeless classics to chef-curated specialties, our menu is designed for guests who appreciate quality, consistency, and unforgettable taste.'
+  ],
+  highlights: [
+    '🥬 Fresh ingredients sourced daily',
+    '📜 Authentic recipes with modern finesse',
+    '👨‍🍳 Passionate chefs, crafted presentations',
+    '✨ Premium quality in every serving',
+    '🍉 Eat fresh, Feel fresh'
+  ]
+};
 
 const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
   {
@@ -1549,7 +1561,7 @@ export default function App() {
             ...sectionStyle,
             paddingTop: 56,
             display: 'grid',
-            gridTemplateColumns: 'minmax(280px, 1.15fr) minmax(260px, 0.85fr)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: 34,
             alignItems: 'center',
           }}
