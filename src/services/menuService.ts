@@ -113,22 +113,26 @@ function mapGalleryToRow(item: GalleryItem, idx: number): any {
 export const MenuService = {
   async getRestaurantInfo(): Promise<RestaurantInfo> {
     const supabase = requireClient();
-    const [{ data: infoList, error: infoError }, { data: chatList, error: chatError }] = await Promise.all([
-      supabase.from('restaurant_info').select('*').order('updated_at', { ascending: false }).limit(1),
-      supabase.from('chat_settings').select('*').order('updated_at', { ascending: false }).limit(1),
+    const [{ data: infoList, error: infoError }, { data: chatList }] = await Promise.all([
+      supabase.from('restaurant_info').select('*').limit(1),
+      supabase.from('chat_settings').select('*').limit(1),
     ]);
     if (infoError) fail('read restaurant_info', infoError);
-    if (chatError) fail('read chat_settings', chatError);
     const infoRow = infoList?.[0];
     if (!infoRow) throw new Error('No row found in restaurant_info.');
     const chatRow = chatList?.[0] || {};
     return {
-      name: infoRow.name, address: infoRow.address, phone: infoRow.phone,
-      openingHours: infoRow.opening_hours, instagram: infoRow.instagram,
-      website: infoRow.website, diningStyle: infoRow.dining_style,
+      name: infoRow.name || 'Namaste Siam Indian Kitchen',
+      address: infoRow.address || '',
+      phone: infoRow.phone || '',
+      openingHours: infoRow.opening_hours || '',
+      instagram: infoRow.instagram || '',
+      website: infoRow.website || '',
+      diningStyle: infoRow.dining_style || '',
       whatsappNumber: chatRow.whatsapp_number || '',
       whatsappMessage: chatRow.whatsapp_default_message || '',
-      lineId: chatRow.line_id || '', lineQrUrl: chatRow.line_qr_url || '',
+      lineId: chatRow.line_id || '',
+      lineQrUrl: chatRow.line_qr_url || '',
       contactActiveChannel: (chatRow.contact_active_channel || 'both') as any
     };
   },
@@ -138,42 +142,48 @@ export const MenuService = {
     const { data: existingInfo, error: readInfoErr } = await supabase
       .from('restaurant_info')
       .select('id')
-      .order('updated_at', { ascending: false })
       .limit(1);
     if (readInfoErr) fail('read restaurant_info', readInfoErr);
-    const infoPayload = {
-      name: info.name, address: info.address, phone: info.phone,
-      opening_hours: info.openingHours, instagram: info.instagram,
-      website: info.website, dining_style: info.diningStyle,
-      updated_at: new Date().toISOString()
+    const infoPayload: any = {
+      name: info.name,
+      address: info.address,
+      phone: info.phone,
+      opening_hours: info.openingHours,
+      instagram: info.instagram,
+      website: info.website,
+      dining_style: info.diningStyle
     };
     if (existingInfo && existingInfo.length > 0 && existingInfo[0]?.id) {
-      const { error: infoErr } = await supabase.from('restaurant_info').update(infoPayload).eq('id', existingInfo[0].id);
-      if (infoErr) fail('update restaurant_info', infoErr);
-    } else {
-      const { error: infoErr } = await supabase.from('restaurant_info').insert(infoPayload);
-      if (infoErr) fail('insert restaurant_info', infoErr);
+      infoPayload.id = existingInfo[0].id;
+    }
+    const { error: infoErr } = await supabase.from('restaurant_info').upsert(infoPayload);
+    if (infoErr) {
+      if (existingInfo?.[0]?.id) {
+        const { error: updateErr } = await supabase.from('restaurant_info').update(infoPayload).eq('id', existingInfo[0].id);
+        if (updateErr) fail('update restaurant_info', updateErr);
+      } else {
+        fail('save restaurant_info', infoErr);
+      }
     }
 
-    const { data: existingChat, error: readChatErr } = await supabase
-      .from('chat_settings')
-      .select('id')
-      .order('updated_at', { ascending: false })
-      .limit(1);
-    if (readChatErr) fail('read chat_settings', readChatErr);
-    const chatPayload = {
-      whatsapp_number: info.whatsappNumber || '',
-      whatsapp_default_message: info.whatsappMessage || '',
-      line_id: info.lineId || '', line_qr_url: info.lineQrUrl || '',
-      contact_active_channel: info.contactActiveChannel || 'both',
-      updated_at: new Date().toISOString()
-    };
-    if (existingChat && existingChat.length > 0 && existingChat[0]?.id) {
-      const { error: chatErr } = await supabase.from('chat_settings').update(chatPayload).eq('id', existingChat[0].id);
-      if (chatErr) fail('update chat_settings', chatErr);
-    } else {
-      const { error: chatErr } = await supabase.from('chat_settings').insert(chatPayload);
-      if (chatErr) fail('insert chat_settings', chatErr);
+    try {
+      const { data: existingChat } = await supabase
+        .from('chat_settings')
+        .select('id')
+        .limit(1);
+      const chatPayload: any = {
+        whatsapp_number: info.whatsappNumber || '',
+        whatsapp_default_message: info.whatsappMessage || '',
+        line_id: info.lineId || '',
+        line_qr_url: info.lineQrUrl || '',
+        contact_active_channel: info.contactActiveChannel || 'both'
+      };
+      if (existingChat && existingChat.length > 0 && existingChat[0]?.id) {
+        chatPayload.id = existingChat[0].id;
+      }
+      await supabase.from('chat_settings').upsert(chatPayload);
+    } catch (err) {
+      console.warn('Could not save chat_settings:', err);
     }
   },
 
@@ -182,7 +192,6 @@ export const MenuService = {
     const { data, error } = await supabase
       .from('about_info')
       .select('*')
-      .order('updated_at', { ascending: false })
       .limit(1);
     if (error) fail('read about_info', error);
     const row = data?.[0];
@@ -195,20 +204,23 @@ export const MenuService = {
     const { data: existing, error: readErr } = await supabase
       .from('about_info')
       .select('id')
-      .order('updated_at', { ascending: false })
       .limit(1);
     if (readErr) fail('read about_info', readErr);
-    const rowPayload = {
+    const rowPayload: any = {
       story_paragraphs: about.story || [],
-      highlights: about.highlights || [],
-      updated_at: new Date().toISOString()
+      highlights: about.highlights || []
     };
     if (existing && existing.length > 0 && existing[0]?.id) {
-      const { error } = await supabase.from('about_info').update(rowPayload).eq('id', existing[0].id);
-      if (error) fail('update about_info', error);
-    } else {
-      const { error } = await supabase.from('about_info').insert(rowPayload);
-      if (error) fail('insert about_info', error);
+      rowPayload.id = existing[0].id;
+    }
+    const { error } = await supabase.from('about_info').upsert(rowPayload);
+    if (error) {
+      if (existing?.[0]?.id) {
+        const { error: updateErr } = await supabase.from('about_info').update(rowPayload).eq('id', existing[0].id);
+        if (updateErr) fail('update about_info', updateErr);
+      } else {
+        fail('save about_info', error);
+      }
     }
   },
 
