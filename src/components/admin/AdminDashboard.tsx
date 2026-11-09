@@ -56,11 +56,11 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({
-  dishes,
-  categories,
-  restaurantInfo,
-  aboutInfo,
-  gallery,
+  dishes: rawDishes,
+  categories: rawCategories,
+  restaurantInfo: rawRestaurantInfo,
+  aboutInfo: rawAboutInfo,
+  gallery: rawGallery,
   onUpdateDishes,
   onUpdateRestaurantInfo,
   onUpdateAboutInfo,
@@ -70,6 +70,50 @@ export default function AdminDashboard({
   onLogout
 }: AdminDashboardProps) {
   const { logout } = useAdminAuth();
+
+  // Guard all incoming props against undefined/null
+  const dishes: Dish[] = useMemo(() => (Array.isArray(rawDishes) ? rawDishes : []), [rawDishes]);
+  const categories: Category[] = useMemo(() => {
+    if (Array.isArray(rawCategories) && rawCategories.length > 0) return rawCategories;
+    return [{ id: 'starters', slug: 'starters', name: 'Starters', label: 'Starters', display_order: 1, active: true }];
+  }, [rawCategories]);
+  const gallery: GalleryItem[] = useMemo(() => (Array.isArray(rawGallery) ? rawGallery : []), [rawGallery]);
+  const restaurantInfo: RestaurantInfo = useMemo(() => ({
+    name: rawRestaurantInfo?.name || 'Namaste Siam Indian Kitchen',
+    address: rawRestaurantInfo?.address || 'Talad Ruamsab, Bangkok, Thailand',
+    phone: rawRestaurantInfo?.phone || '+66829560609',
+    openingHours: rawRestaurantInfo?.openingHours || 'Monday – Friday: 11:00 AM – 11:00 PM',
+    instagram: rawRestaurantInfo?.instagram || '@namastesiam',
+    website: rawRestaurantInfo?.website || 'https://namastesiamindiankitchen.vercel.app',
+    diningStyle: rawRestaurantInfo?.diningStyle || 'Premium Casual • Fine Taste',
+    whatsappNumber: rawRestaurantInfo?.whatsappNumber || '',
+    whatsappMessage: rawRestaurantInfo?.whatsappMessage || '',
+    lineId: rawRestaurantInfo?.lineId || '',
+    lineQrUrl: rawRestaurantInfo?.lineQrUrl || '',
+    contactActiveChannel: rawRestaurantInfo?.contactActiveChannel || 'both'
+  }), [rawRestaurantInfo]);
+  const aboutInfo: AboutInfo = useMemo(() => {
+    const rawStory = rawAboutInfo?.story;
+    let storyList: string[] = [];
+    if (Array.isArray(rawStory)) {
+      storyList = rawStory.map(s => String(s || '').trim()).filter(Boolean);
+    } else if (typeof rawStory === 'string') {
+      storyList = (rawStory as string).split('\n').map(s => s.trim()).filter(Boolean);
+    }
+
+    const rawHighlights = rawAboutInfo?.highlights;
+    let highlightList: string[] = [];
+    if (Array.isArray(rawHighlights)) {
+      highlightList = rawHighlights.map(h => String(h || '').trim()).filter(Boolean);
+    } else if (typeof rawHighlights === 'string') {
+      highlightList = (rawHighlights as string).split(',').map(h => h.trim()).filter(Boolean);
+    }
+
+    return {
+      story: storyList,
+      highlights: highlightList
+    };
+  }, [rawAboutInfo]);
   
   // Navigation Tabs state
   const [activeTab, setActiveTab] = useState<'overview' | 'dishes' | 'categories' | 'restaurant' | 'chat' | 'gallery'>('overview');
@@ -642,14 +686,20 @@ export default function AdminDashboard({
   // SETTINGS & PROFILE STORY STATES & OPERATIONS
   // ==========================================
   const [profileForm, setProfileForm] = useState<RestaurantInfo>({ ...restaurantInfo });
-  const [aboutForm, setAboutForm] = useState<AboutInfo>({ ...aboutInfo });
+  const [aboutForm, setAboutForm] = useState<AboutInfo>({
+    story: [...aboutInfo.story],
+    highlights: [...aboutInfo.highlights]
+  });
   const [storyInput, setStoryInput] = useState<string>(aboutInfo.story.join('\n'));
   const [highlightInput, setHighlightInput] = useState<string>('');
   const [isProfileDirty, setIsProfileDirty] = useState<boolean>(false);
 
   useEffect(() => {
     setProfileForm({ ...restaurantInfo });
-    setAboutForm({ ...aboutInfo });
+    setAboutForm({
+      story: [...aboutInfo.story],
+      highlights: [...aboutInfo.highlights]
+    });
     setStoryInput(aboutInfo.story.join('\n'));
     setIsProfileDirty(false);
   }, [restaurantInfo, aboutInfo]);
@@ -1968,7 +2018,7 @@ export default function AdminDashboard({
                       </div>
 
                       <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto">
-                        {aboutForm.highlights.map((tag, i) => (
+                        {(aboutForm.highlights || []).map((tag, i) => (
                           <span
                             key={i}
                             onClick={() => handleRemoveHighlight(i)}
