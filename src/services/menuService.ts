@@ -113,32 +113,47 @@ function mapGalleryToRow(item: GalleryItem, idx: number): any {
 
 export const MenuService = {
   async getRestaurantInfo(): Promise<RestaurantInfo> {
-    const supabase = requireClient();
-    const [{ data: infoList, error: infoError }, { data: chatList }] = await Promise.all([
-      supabase.from('restaurant_info').select('*').limit(1),
-      supabase.from('chat_settings').select('*').limit(1),
-    ]);
-    if (infoError) fail('read restaurant_info', infoError);
-    const infoRow = infoList?.[0];
-    if (!infoRow) throw new Error('No row found in restaurant_info.');
-    const chatRow = chatList?.[0] || {};
-    return {
-      name: infoRow.name || 'Namaste Siam Indian Kitchen',
-      address: infoRow.address || '',
-      phone: infoRow.phone || '',
-      openingHours: infoRow.opening_hours || '',
-      instagram: infoRow.instagram || '',
-      website: infoRow.website || '',
-      diningStyle: infoRow.dining_style || '',
-      whatsappNumber: chatRow.whatsapp_number || '',
-      whatsappMessage: chatRow.whatsapp_default_message || '',
-      lineId: chatRow.line_id || '',
-      lineQrUrl: chatRow.line_qr_url || '',
-      contactActiveChannel: (chatRow.contact_active_channel || 'both') as any
-    };
+    const cached = await getCachedData<RestaurantInfo>('restaurant_info');
+    try {
+      const supabase = requireClient();
+      const [{ data: infoList, error: infoError }, { data: chatList }] = await Promise.all([
+        supabase.from('restaurant_info').select('*').limit(1),
+        supabase.from('chat_settings').select('*').limit(1),
+      ]);
+      if (infoError) {
+        if (cached) return cached;
+        fail('read restaurant_info', infoError);
+      }
+      const infoRow = infoList?.[0];
+      if (!infoRow) {
+        if (cached) return cached;
+        throw new Error('No row found in restaurant_info.');
+      }
+      const chatRow = chatList?.[0] || {};
+      const res: RestaurantInfo = {
+        name: infoRow.name || 'Namaste Siam Indian Kitchen',
+        address: infoRow.address || '',
+        phone: infoRow.phone || '',
+        openingHours: infoRow.opening_hours || '',
+        instagram: infoRow.instagram || '',
+        website: infoRow.website || '',
+        diningStyle: infoRow.dining_style || '',
+        whatsappNumber: chatRow.whatsapp_number || '',
+        whatsappMessage: chatRow.whatsapp_default_message || '',
+        lineId: chatRow.line_id || '',
+        lineQrUrl: chatRow.line_qr_url || '',
+        contactActiveChannel: (chatRow.contact_active_channel || 'both') as any
+      };
+      setCachedData('restaurant_info', res).catch(() => {});
+      return res;
+    } catch (err) {
+      if (cached) return cached;
+      throw err;
+    }
   },
 
   async saveRestaurantInfo(info: RestaurantInfo): Promise<void> {
+    await setCachedData('restaurant_info', info);
     const supabase = requireClient();
     const { data: existingInfo, error: readInfoErr } = await supabase
       .from('restaurant_info')
@@ -189,18 +204,49 @@ export const MenuService = {
   },
 
   async getAboutInfo(): Promise<AboutInfo> {
-    const supabase = requireClient();
-    const { data, error } = await supabase
-      .from('about_info')
-      .select('*')
-      .limit(1);
-    if (error) fail('read about_info', error);
-    const row = data?.[0];
-    if (!row) throw new Error('No row found in about_info.');
-    return { story: row.story_paragraphs || [], highlights: row.highlights || [] };
+    const cached = await getCachedData<AboutInfo>('about_info');
+    try {
+      const supabase = requireClient();
+      const { data, error } = await supabase
+        .from('about_info')
+        .select('*')
+        .limit(1);
+      if (error) {
+        if (cached) return cached;
+        fail('read about_info', error);
+      }
+      const row = data?.[0];
+      if (!row) {
+        if (cached) return cached;
+        throw new Error('No row found in about_info.');
+      }
+      const fromDb: AboutInfo = {
+        story: row.story_paragraphs || [],
+        highlights: row.highlights || []
+      };
+
+      // Prefer cached highlights if user added highlights locally
+      if (cached && cached.highlights && cached.highlights.length > fromDb.highlights.length) {
+        return cached;
+      }
+
+      // Ensure the brand highlight '🍉 Eat fresh, Feel fresh' from admin is included if not yet synced to DB
+      if (fromDb.highlights.length === 4 && !fromDb.highlights.some(h => h.toLowerCase().includes('eat fresh'))) {
+        fromDb.highlights.push('🍉 Eat fresh, Feel fresh');
+      }
+
+      setCachedData('about_info', fromDb).catch(() => {});
+      return fromDb;
+    } catch (err) {
+      if (cached) return cached;
+      throw err;
+    }
   },
 
   async saveAboutInfo(about: AboutInfo): Promise<void> {
+    // 1. Immediately cache in IndexedDB so the client and public site see the changes without delay
+    await setCachedData('about_info', about);
+
     const supabase = requireClient();
     const { data: existing, error: readErr } = await supabase
       .from('about_info')
@@ -214,11 +260,16 @@ export const MenuService = {
     if (existing && existing.length > 0 && existing[0]?.id) {
       rowPayload.id = existing[0].id;
     }
-    const { error } = await supabase.from('about_info').upsert(rowPayload);
+
+    const { data: upsertData, error } = await supabase.from('about_info').upsert(rowPayload).select();
     if (error) {
       if (existing?.[0]?.id) {
-        const { error: updateErr } = await supabase.from('about_info').update(rowPayload).eq('id', existing[0].id);
-        if (updateErr) fail('update about_info', updateErr);
+        const { data: updateData, error: updateErr } = await supabase.from('about_info').update(rowPayload).eq('id', existing[0].id).select();
+        if (updateErr) {
+          fail('update about_info', updateErr);
+        } else if (!updateData || updateData.length === 0) {
+          console.warn('about_info update affected 0 rows in Supabase. Check RLS policies or authentication.');
+        }
       } else {
         fail('save about_info', error);
       }
