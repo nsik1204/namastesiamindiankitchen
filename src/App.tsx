@@ -1156,8 +1156,13 @@ export default function App() {
               flexWrap: 'wrap',
             }}
           >
-            <div style={{ fontWeight: 800, fontSize: 18, color: '#FFF9EF', letterSpacing: '-0.01em' }}>
-              Namaste Siam <span style={{ color: '#D9B66D' }}>Indian Kitchen</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 800, fontSize: 18, color: '#FFF9EF', letterSpacing: '-0.01em' }}>
+              <img
+                src="/favicon-32x32.png"
+                alt="Namaste Siam Logo"
+                style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(217, 182, 109, 0.4)' }}
+              />
+              <span>Namaste Siam <span style={{ color: '#D9B66D' }}>Indian Kitchen</span></span>
             </div>
             <ul
               style={{
@@ -1781,8 +1786,15 @@ export default function App() {
             }}
           >
             <div>
-              <div style={{ fontSize: 19, fontWeight: 800, color: '#D9B66D', fontFamily: 'var(--font-display, Georgia, serif)' }}>
-                {info.name}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <img
+                  src="/logo.png"
+                  alt="Namaste Siam Logo"
+                  style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(217, 182, 109, 0.4)' }}
+                />
+                <div style={{ fontSize: 19, fontWeight: 800, color: '#D9B66D', fontFamily: 'var(--font-display, Georgia, serif)' }}>
+                  {info.name}
+                </div>
               </div>
               <p style={{ fontSize: 13, lineHeight: 1.75, marginTop: 10, color: 'rgba(255, 249, 239, 0.85)' }}>
                 Premium restaurant menu experience with authentic flavours, elegant ambience and

@@ -837,9 +837,11 @@ export default function AdminDashboard({
       {/* FIXED HEADER NAVBAR */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-[#FFF9EF]/95 backdrop-blur-md border-b border-[#E4D7BF] z-30 px-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#173D32]/10 border border-[#173D32]/25 flex items-center justify-center shrink-0">
-            <SlidersHorizontal className="w-4 h-4 text-[#173D32]" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Namaste Siam Logo"
+            className="w-10 h-10 rounded-full object-cover shadow-xs border border-[#D9B66D]/50 shrink-0"
+          />
           <div>
             <h1 className="font-display font-extrabold text-[#173D32] text-lg leading-tight tracking-tight">{restaurantInfo.name}</h1>
             <p className="text-xs font-semibold text-[#B58C45] tracking-wide">Control Console • Super Admin</p>
