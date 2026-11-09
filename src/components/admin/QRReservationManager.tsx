@@ -22,12 +22,33 @@ export default function QRReservationManager({
 }: QRReservationManagerProps) {
   const printFrameId = useId();
 
-  // Settings
-  const qrEnabled = restaurantInfo.qrTableBookingEnabled !== false;
-  const webEnabled = restaurantInfo.websiteReservationEnabled !== false;
-  const tables = restaurantInfo.reservationTables && restaurantInfo.reservationTables.length > 0
-    ? restaurantInfo.reservationTables
-    : ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'];
+  // Settings with local optimistic state
+  const [qrEnabled, setQrEnabled] = useState<boolean>(() => restaurantInfo.qrTableBookingEnabled !== false);
+  const [webEnabled, setWebEnabled] = useState<boolean>(() => restaurantInfo.websiteReservationEnabled !== false);
+  const [tables, setTables] = useState<string[]>(() => 
+    restaurantInfo.reservationTables && restaurantInfo.reservationTables.length > 0
+      ? restaurantInfo.reservationTables
+      : ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
+  );
+
+  // Sync state whenever restaurantInfo prop changes
+  useEffect(() => {
+    if (restaurantInfo.qrTableBookingEnabled !== undefined) {
+      setQrEnabled(restaurantInfo.qrTableBookingEnabled);
+    }
+  }, [restaurantInfo.qrTableBookingEnabled]);
+
+  useEffect(() => {
+    if (restaurantInfo.websiteReservationEnabled !== undefined) {
+      setWebEnabled(restaurantInfo.websiteReservationEnabled);
+    }
+  }, [restaurantInfo.websiteReservationEnabled]);
+
+  useEffect(() => {
+    if (Array.isArray(restaurantInfo.reservationTables) && restaurantInfo.reservationTables.length > 0) {
+      setTables(restaurantInfo.reservationTables);
+    }
+  }, [restaurantInfo.reservationTables]);
 
   const [selectedTable, setSelectedTable] = useState<string>(tables[0] || '01');
   const [newTableInput, setNewTableInput] = useState<string>('');
@@ -89,14 +110,17 @@ export default function QRReservationManager({
     };
   }, [bookingUrl, showToast]);
 
-  // Handle Switch 1: QR Code Table Booking
+  // Handle Switch 1: QR Code Table Booking (Optimistic UI)
   const handleToggleQR = async () => {
-    setIsSavingSetting(true);
     const nextState = !qrEnabled;
+    setQrEnabled(nextState);
+    setIsSavingSetting(true);
     try {
       await onUpdateRestaurantInfo({
         ...restaurantInfo,
         qrTableBookingEnabled: nextState,
+        websiteReservationEnabled: webEnabled,
+        reservationTables: tables,
       });
       showToast(
         nextState 
@@ -105,20 +129,24 @@ export default function QRReservationManager({
         'success'
       );
     } catch (err: any) {
+      setQrEnabled(!nextState); // Rollback
       showToast('Failed to update QR Booking setting: ' + (err?.message || ''), 'error');
     } finally {
       setIsSavingSetting(false);
     }
   };
 
-  // Handle Switch 2: Standard Website Reservation
+  // Handle Switch 2: Standard Website Reservation (Optimistic UI)
   const handleToggleWebReservation = async () => {
-    setIsSavingSetting(true);
     const nextState = !webEnabled;
+    setWebEnabled(nextState);
+    setIsSavingSetting(true);
     try {
       await onUpdateRestaurantInfo({
         ...restaurantInfo,
+        qrTableBookingEnabled: qrEnabled,
         websiteReservationEnabled: nextState,
+        reservationTables: tables,
       });
       showToast(
         nextState 
@@ -127,6 +155,7 @@ export default function QRReservationManager({
         'success'
       );
     } catch (err: any) {
+      setWebEnabled(!nextState); // Rollback
       showToast('Failed to update Website Reservation setting: ' + (err?.message || ''), 'error');
     } finally {
       setIsSavingSetting(false);
@@ -442,16 +471,16 @@ export default function QRReservationManager({
               <button
                 type="button"
                 onClick={handleToggleQR}
-                disabled={isSavingSetting}
-                className={`relative inline-flex h-6 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none shadow-inner ${
                   qrEnabled ? 'bg-[#173D32]' : 'bg-[#C4B7A6]'
-                } ${isSavingSetting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                }`}
                 role="switch"
                 aria-checked={qrEnabled}
+                aria-label="Toggle QR Table Booking"
               >
                 <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                    qrEnabled ? 'translate-x-6' : 'translate-x-0'
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    qrEnabled ? 'translate-x-7' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -495,16 +524,16 @@ export default function QRReservationManager({
               <button
                 type="button"
                 onClick={handleToggleWebReservation}
-                disabled={isSavingSetting}
-                className={`relative inline-flex h-6 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none shadow-inner ${
                   webEnabled ? 'bg-[#173D32]' : 'bg-[#C4B7A6]'
-                } ${isSavingSetting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                }`}
                 role="switch"
                 aria-checked={webEnabled}
+                aria-label="Toggle Website Reservation"
               >
                 <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                    webEnabled ? 'translate-x-6' : 'translate-x-0'
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    webEnabled ? 'translate-x-7' : 'translate-x-0'
                   }`}
                 />
               </button>

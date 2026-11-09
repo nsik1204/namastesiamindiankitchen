@@ -206,8 +206,14 @@ export const MenuService = {
       };
       if (existingChat && existingChat.length > 0 && existingChat[0]?.id) {
         chatPayload.id = existingChat[0].id;
+        const { error: updateErr } = await supabase.from('chat_settings').update(chatPayload).eq('id', existingChat[0].id);
+        if (updateErr) {
+          console.warn('Update chat_settings error, trying upsert:', updateErr);
+          await supabase.from('chat_settings').upsert(chatPayload);
+        }
+      } else {
+        await supabase.from('chat_settings').upsert(chatPayload);
       }
-      await supabase.from('chat_settings').upsert(chatPayload);
     } catch (err) {
       console.warn('Could not save chat_settings:', err);
     }

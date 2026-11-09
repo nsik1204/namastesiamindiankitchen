@@ -92,7 +92,12 @@ export default function AdminDashboard({
     whatsappMessage: rawRestaurantInfo?.whatsappMessage || '',
     lineId: rawRestaurantInfo?.lineId || '',
     lineQrUrl: rawRestaurantInfo?.lineQrUrl || '',
-    contactActiveChannel: rawRestaurantInfo?.contactActiveChannel || 'both'
+    contactActiveChannel: rawRestaurantInfo?.contactActiveChannel || 'both',
+    qrTableBookingEnabled: rawRestaurantInfo?.qrTableBookingEnabled !== undefined ? rawRestaurantInfo.qrTableBookingEnabled : true,
+    websiteReservationEnabled: rawRestaurantInfo?.websiteReservationEnabled !== undefined ? rawRestaurantInfo.websiteReservationEnabled : true,
+    reservationTables: Array.isArray(rawRestaurantInfo?.reservationTables) && rawRestaurantInfo.reservationTables.length > 0
+      ? rawRestaurantInfo.reservationTables
+      : ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
   }), [rawRestaurantInfo]);
   const aboutInfo: AboutInfo = useMemo(() => {
     const rawStory = rawAboutInfo?.story;
