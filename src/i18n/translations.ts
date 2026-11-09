@@ -131,6 +131,20 @@ export const UI_TRANSLATIONS = {
     valPhoneInvalid: 'Please enter a valid phone number (at least 8 digits).',
     valDatePast: 'Please select today or a future date for your reservation.',
 
+    // QR & Extended Reservation
+    qrBookingTitle: 'Table Reservation',
+    qrBookingSubtitle: 'Scan-to-Book Experience',
+    tableReferenceLabel: 'Table',
+    tableReferenceBadge: 'Table Reference',
+    qrBookingUnavailableTitle: 'QR Table Booking Paused',
+    qrBookingUnavailableMsg: 'Table QR booking is currently paused. Please call our team directly or speak to your table server.',
+    webReservationUnavailableTitle: 'Online Reservations Paused',
+    webReservationUnavailableMsg: 'Online table reservations are currently paused. Please contact our team directly by phone or WhatsApp to reserve your table.',
+    qrSubmitSuccessTitle: 'Reservation Request Received',
+    qrSubmitSuccessMsg: 'Your reservation request has been received. Our restaurant team will contact you to confirm your booking.',
+    qrNoticeStaffConfirm: 'Please note: A table reservation is confirmed only after our restaurant team checks table availability.',
+    scanToReserve: 'Scan to Reserve Your Table',
+
     // Gallery & Lightbox
     photoOf: 'Photo',
     of: 'of',
@@ -286,6 +300,20 @@ export const UI_TRANSLATIONS = {
     valPhoneRequired: 'กรุณาระบุหมายเลขโทรศัพท์หรือ WhatsApp สำหรับติดต่อ',
     valPhoneInvalid: 'กรุณาระบุหมายเลขโทรศัพท์ที่ถูกต้อง (อย่างน้อย 8 หลัก)',
     valDatePast: 'กรุณาเลือกวันที่วันนี้หรือวันที่ในอนาคตสำหรับการจอง',
+
+    // QR & Extended Reservation
+    qrBookingTitle: 'จองโต๊ะอาหาร',
+    qrBookingSubtitle: 'สแกนเพื่อจองโต๊ะโดยตรง',
+    tableReferenceLabel: 'โต๊ะ',
+    tableReferenceBadge: 'หมายเลขโต๊ะ',
+    qrBookingUnavailableTitle: 'การจองโต๊ะผ่าน QR ปิดชั่วคราว',
+    qrBookingUnavailableMsg: 'ระบบจองโต๊ะผ่านคิวอาร์โค้ดปิดให้บริการชั่วคราว กรุณาแจ้งพนักงานในร้านหรือโทรติดต่อเราโดยตรง',
+    webReservationUnavailableTitle: 'การจองโต๊ะออนไลน์ปิดชั่วคราว',
+    webReservationUnavailableMsg: 'ระบบจองโต๊ะออนไลน์ปิดให้บริการชั่วคราว กรุณาโทรหรือติดต่อเราทาง WhatsApp เพื่อจองโต๊ะ',
+    qrSubmitSuccessTitle: 'บันทึกคำขอจองโต๊ะแล้ว',
+    qrSubmitSuccessMsg: 'คำขอจองโต๊ะของคุณได้รับการบันทึกแล้ว ทีมงานของเราจะติดต่อกลับเพื่อยืนยันการจอง',
+    qrNoticeStaffConfirm: 'หมายเหตุ: การจองโต๊ะจะได้รับการยืนยันหลังจากพนักงานของร้านตรวจสอบที่นั่งว่างเรียบร้อยแล้วเท่านั้น',
+    scanToReserve: 'สแกนเพื่อจองโต๊ะ',
 
     // Gallery & Lightbox
     photoOf: 'ภาพที่',

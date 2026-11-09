@@ -59,6 +59,15 @@ export interface RestaurantInfo {
   lineId?: string;
   lineQrUrl?: string;
   contactActiveChannel?: 'whatsapp' | 'line' | 'both' | 'disabled';
+  qrTableBookingEnabled?: boolean;
+  websiteReservationEnabled?: boolean;
+  reservationTables?: string[];
+}
+
+export interface ReservationSettings {
+  qrTableBookingEnabled: boolean;
+  websiteReservationEnabled: boolean;
+  reservationTables: string[];
 }
 
 export interface AboutInfo {

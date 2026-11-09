@@ -3,6 +3,7 @@ import { MenuService } from "../../services/menuService";
 import { uploadDishImage, fetchImageFromLink } from '../../services/storageService';
 import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from '../../types';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import QRReservationManager from './QRReservationManager';
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -37,7 +38,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Link as LinkIcon,
-  ExternalLink
+  ExternalLink,
+  QrCode
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -116,7 +118,7 @@ export default function AdminDashboard({
   }, [rawAboutInfo]);
   
   // Navigation Tabs state
-  const [activeTab, setActiveTab] = useState<'overview' | 'dishes' | 'categories' | 'restaurant' | 'chat' | 'gallery'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'dishes' | 'categories' | 'restaurant' | 'reservations' | 'chat' | 'gallery'>('overview');
 
   // File upload validation states
   const [foodImgValidation, setFoodImgValidation] = useState<{
@@ -1031,6 +1033,19 @@ export default function AdminDashboard({
 
           <button
             type="button"
+            onClick={() => setActiveTab('reservations')}
+            className={`shrink-0 md:w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all whitespace-nowrap ${
+              activeTab === 'reservations' 
+                ? 'bg-[#173D32] text-[#FFF9EF] shadow-md font-bold border border-[#D9B66D]/40' 
+                : 'text-[#30251E] hover:bg-[#173D32]/10 hover:text-[#173D32]'
+            }`}
+          >
+            <QrCode className="w-4 h-4 shrink-0 text-[#B58C45]" />
+            <span>QR & Reservations</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab('chat')}
             className={`shrink-0 md:w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all whitespace-nowrap ${
               activeTab === 'chat' 
@@ -1107,6 +1122,29 @@ export default function AdminDashboard({
                   <div className="text-3xl font-display font-bold text-[#173D32] tracking-tight">{gallery.length}</div>
                   <span className="text-xs text-[#75685A] font-medium block">High-resolution assets</span>
                 </div>
+              </div>
+
+              {/* QR & Reservation Quick Status Bar */}
+              <div className="bg-[#FFF9EF] p-4 rounded-2xl border border-[#E4D7BF] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-[#173D32] text-[#D9B66D]">
+                    <QrCode className="w-4 h-4" />
+                  </div>
+                  <div className="text-xs">
+                    <span className="font-bold text-[#173D32] block">Table QR & Website Reservation Status</span>
+                    <span className="text-[#75685A]">
+                      QR Table Booking: <strong className={restaurantInfo.qrTableBookingEnabled !== false ? 'text-emerald-700' : 'text-amber-700'}>{restaurantInfo.qrTableBookingEnabled !== false ? 'Active' : 'Paused'}</strong> • Website "Reserve Table": <strong className={restaurantInfo.websiteReservationEnabled !== false ? 'text-emerald-700' : 'text-stone-600'}>{restaurantInfo.websiteReservationEnabled !== false ? 'Visible' : 'Hidden'}</strong>
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('reservations')}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold bg-[#173D32] hover:bg-[#102C25] text-[#D9B66D] px-3.5 py-2 rounded-xl transition-colors cursor-pointer self-start sm:self-auto"
+                >
+                  <span>Manage QR & Tables</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </button>
               </div>
 
               {/* Special Promoters Board quick control switches */}
@@ -2106,6 +2144,19 @@ export default function AdminDashboard({
 
               </form>
             </div>
+          )}
+
+          {/* ====================================================================
+              VIEW: QR CODE TABLE RESERVATION & FEATURE CONTROLS
+              ==================================================================== */}
+          {activeTab === 'reservations' && (
+            <QRReservationManager
+              restaurantInfo={restaurantInfo}
+              onUpdateRestaurantInfo={async (updated) => {
+                await onUpdateRestaurantInfo(updated);
+              }}
+              showToast={showToast}
+            />
           )}
 
           {/* ====================================================================

@@ -142,7 +142,12 @@ export const MenuService = {
         whatsappMessage: chatRow.whatsapp_default_message || '',
         lineId: chatRow.line_id || '',
         lineQrUrl: chatRow.line_qr_url || '',
-        contactActiveChannel: (chatRow.contact_active_channel || 'both') as any
+        contactActiveChannel: (chatRow.contact_active_channel || 'both') as any,
+        qrTableBookingEnabled: chatRow.qr_table_booking_enabled !== undefined ? Boolean(chatRow.qr_table_booking_enabled) : true,
+        websiteReservationEnabled: chatRow.website_reservation_enabled !== undefined ? Boolean(chatRow.website_reservation_enabled) : true,
+        reservationTables: Array.isArray(chatRow.reservation_tables) && chatRow.reservation_tables.length > 0
+          ? chatRow.reservation_tables
+          : ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
       };
       setCachedData('restaurant_info', res).catch(() => {});
       return res;
@@ -192,7 +197,12 @@ export const MenuService = {
         whatsapp_default_message: info.whatsappMessage || '',
         line_id: info.lineId || '',
         line_qr_url: info.lineQrUrl || '',
-        contact_active_channel: info.contactActiveChannel || 'both'
+        contact_active_channel: info.contactActiveChannel || 'both',
+        qr_table_booking_enabled: info.qrTableBookingEnabled !== undefined ? info.qrTableBookingEnabled : true,
+        website_reservation_enabled: info.websiteReservationEnabled !== undefined ? info.websiteReservationEnabled : true,
+        reservation_tables: info.reservationTables && info.reservationTables.length > 0
+          ? info.reservationTables
+          : ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
       };
       if (existingChat && existingChat.length > 0 && existingChat[0]?.id) {
         chatPayload.id = existingChat[0].id;
@@ -201,6 +211,26 @@ export const MenuService = {
     } catch (err) {
       console.warn('Could not save chat_settings:', err);
     }
+  },
+
+  async getReservationSettings(): Promise<{ qrTableBookingEnabled: boolean; websiteReservationEnabled: boolean; reservationTables: string[] }> {
+    const info = await this.getRestaurantInfo();
+    return {
+      qrTableBookingEnabled: info.qrTableBookingEnabled !== false,
+      websiteReservationEnabled: info.websiteReservationEnabled !== false,
+      reservationTables: info.reservationTables || ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
+    };
+  },
+
+  async saveReservationSettings(settings: { qrTableBookingEnabled: boolean; websiteReservationEnabled: boolean; reservationTables?: string[] }): Promise<void> {
+    const current = await this.getRestaurantInfo();
+    const updated: RestaurantInfo = {
+      ...current,
+      qrTableBookingEnabled: settings.qrTableBookingEnabled,
+      websiteReservationEnabled: settings.websiteReservationEnabled,
+      reservationTables: settings.reservationTables || current.reservationTables || ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
+    };
+    await this.saveRestaurantInfo(updated);
   },
 
   async getAboutInfo(): Promise<AboutInfo> {

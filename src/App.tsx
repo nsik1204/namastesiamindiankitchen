@@ -7,6 +7,7 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import { getSupabaseClient } from './services/supabaseClient';
 import OrderDrawer, { CartItem } from './components/ordering/OrderDrawer';
 import ReservationModal from './components/ordering/ReservationModal';
+import QRReservationPage from './components/ordering/QRReservationPage';
 import FloatingCartPill from './components/ordering/FloatingCartPill';
 import GalleryLightbox from './components/gallery/GalleryLightbox';
 import LocationSection from './components/location/LocationSection';
@@ -1304,6 +1305,16 @@ export default function App() {
     );
   }
 
+  if (decodedPath === '/reserve') {
+    const effectiveRestaurantInfo = restaurantInfo || EMPTY_RESTAURANT_INFO;
+    return (
+      <QRReservationPage
+        restaurantInfo={effectiveRestaurantInfo}
+        onNavigateHome={goHome}
+      />
+    );
+  }
+
   if (decodedPath !== '/' && decodedPath !== '/index.html') {
     return (
       <>
@@ -1528,28 +1539,30 @@ export default function App() {
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={() => setIsReservationOpen(true)}
-                style={{
-                  padding: '7px 16px',
-                  borderRadius: 999,
-                  border: '1px solid #D9B66D',
-                  background: '#D9B66D',
-                  color: '#102C25',
-                  fontSize: 12.5,
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  boxShadow: '0 4px 14px rgba(217,182,109,0.3)',
-                  transition: 'transform 0.15s ease',
-                }}
-              >
-                <span>📅</span>
-                <span>{t('reserveTable')}</span>
-              </button>
+              {info.websiteReservationEnabled !== false && (
+                <button
+                  type="button"
+                  onClick={() => setIsReservationOpen(true)}
+                  style={{
+                    padding: '7px 16px',
+                    borderRadius: 999,
+                    border: '1px solid #D9B66D',
+                    background: '#D9B66D',
+                    color: '#102C25',
+                    fontSize: 12.5,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: '0 4px 14px rgba(217,182,109,0.3)',
+                    transition: 'transform 0.15s ease',
+                  }}
+                >
+                  <span>📅</span>
+                  <span>{t('reserveTable')}</span>
+                </button>
+              )}
             </div>
           </nav>
         </header>
