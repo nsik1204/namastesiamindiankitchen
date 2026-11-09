@@ -1,5 +1,6 @@
 import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from '../types';
 import { getSupabaseClient } from './supabaseClient';
+import { getCachedData, setCachedData } from './dbCache';
 
 function requireClient() {
   const supabase = getSupabaseClient();
@@ -268,9 +269,35 @@ export const MenuService = {
 
   async getDishes(): Promise<Dish[]> {
     const supabase = requireClient();
-    const { data, error } = await supabase.from('foods').select('*').order('display_order');
-    if (error) fail('read foods', error);
-    return (data || []).map(mapDbDishToDish);
+    try {
+      // Parallel chunked fetch reduces per-request payload size and prevents 57014 statement timeout on large image payloads
+      const [chunk1, chunk2] = await Promise.all([
+        supabase.from('foods').select('*').range(0, 15),
+        supabase.from('foods').select('*').range(16, 50),
+      ]);
+
+      let rawData: any[] = [];
+      if (!chunk1.error && !chunk2.error) {
+        rawData = [...(chunk1.data || []), ...(chunk2.data || [])];
+      } else {
+        // Fallback: single fetch without server-side ordering
+        const fallback = await supabase.from('foods').select('*');
+        if (fallback.error) fail('read foods', fallback.error);
+        rawData = fallback.data || [];
+      }
+
+      const list = rawData.map(mapDbDishToDish);
+      list.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+      setCachedData('dishes', list).catch(() => {});
+      return list;
+    } catch (err) {
+      const cached = await getCachedData<Dish[]>('dishes');
+      if (cached && cached.length > 0) {
+        console.warn('Serving dishes from local cache due to fetch error:', err);
+        return cached;
+      }
+      throw err;
+    }
   },
 
   async saveDish(dish: Dish): Promise<Dish> {

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { MenuService } from './services/menuService';
+import { getCachedData } from './services/dbCache';
 import { Dish, Category, RestaurantInfo, AboutInfo, GalleryItem } from './types';
 import DishCard from './components/DishCard';
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -706,7 +707,7 @@ const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
   },
 ];
 
-const LOAD_TIMEOUT_MS = 6000;
+const LOAD_TIMEOUT_MS = 28000;
 
 function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -774,6 +775,27 @@ export default function App() {
   useEffect(() => {
     let active = true;
 
+    // Fast-path: preload from local cache so repeat visitors see instant menu
+    (async () => {
+      try {
+        const [cachedDishes, cachedCats, cachedRest, cachedAbout, cachedGal] = await Promise.all([
+          getCachedData<Dish[]>('dishes'),
+          getCachedData<Category[]>('categories'),
+          getCachedData<RestaurantInfo>('restaurant_info'),
+          getCachedData<AboutInfo>('about_info'),
+          getCachedData<GalleryItem[]>('gallery'),
+        ]);
+        if (!active) return;
+        if (cachedDishes && cachedDishes.length > 0) setDishes(cachedDishes);
+        if (cachedCats && cachedCats.length > 0) setCategories(cachedCats);
+        if (cachedRest) setRestaurantInfo(cachedRest);
+        if (cachedAbout) setAboutInfo(cachedAbout);
+        if (cachedGal && cachedGal.length > 0) setGallery(cachedGal);
+      } catch (err) {
+        console.warn('Cache prefetch notice:', err);
+      }
+    })();
+
     (async () => {
       const results = await Promise.allSettled([
         withTimeout(MenuService.getRestaurantInfo(), 'Restaurant info request'),
@@ -792,35 +814,63 @@ export default function App() {
       if (infoRes.status === 'fulfilled' && infoRes.value) {
         setRestaurantInfo(infoRes.value);
       } else {
-        setRestaurantInfo(EMPTY_RESTAURANT_INFO);
-        if (infoRes.status === 'rejected') problems.push(reasonText(infoRes.reason));
+        const cached = await getCachedData<RestaurantInfo>('restaurant_info');
+        if (cached) {
+          setRestaurantInfo(cached);
+        } else {
+          setRestaurantInfo(EMPTY_RESTAURANT_INFO);
+          if (infoRes.status === 'rejected') problems.push(reasonText(infoRes.reason));
+        }
       }
 
       if (aboutRes.status === 'fulfilled' && aboutRes.value) {
         setAboutInfo(aboutRes.value);
       } else {
-        setAboutInfo(EMPTY_ABOUT_INFO);
-        if (aboutRes.status === 'rejected') problems.push(reasonText(aboutRes.reason));
+        const cached = await getCachedData<AboutInfo>('about_info');
+        if (cached) {
+          setAboutInfo(cached);
+        } else {
+          setAboutInfo(EMPTY_ABOUT_INFO);
+          if (aboutRes.status === 'rejected') problems.push(reasonText(aboutRes.reason));
+        }
       }
 
-      // Collections: ONLY database rows are ever shown. On failure we show
-      // nothing rather than stale/static/deleted items.
-      if (catsRes.status === 'fulfilled') setCategories(catsRes.value ?? []);
-      else {
-        setCategories([]);
-        problems.push(reasonText(catsRes.reason));
+      // Collections: ONLY database rows are ever shown.
+      if (catsRes.status === 'fulfilled') {
+        setCategories(catsRes.value ?? []);
+      } else {
+        const cached = await getCachedData<Category[]>('categories');
+        if (cached && cached.length > 0) {
+          setCategories(cached);
+        } else {
+          setCategories([]);
+          problems.push(reasonText(catsRes.reason));
+        }
       }
 
-      if (dishesRes.status === 'fulfilled') setDishes(dishesRes.value ?? []);
-      else {
-        setDishes([]);
-        problems.push(reasonText(dishesRes.reason));
+      if (dishesRes.status === 'fulfilled') {
+        setDishes(dishesRes.value ?? []);
+      } else {
+        const cached = await getCachedData<Dish[]>('dishes');
+        if (cached && cached.length > 0) {
+          setDishes(cached);
+          console.info('Using cached dishes due to live fetch timeout.');
+        } else {
+          setDishes([]);
+          problems.push(reasonText(dishesRes.reason));
+        }
       }
 
-      if (galleryRes.status === 'fulfilled') setGallery(galleryRes.value ?? []);
-      else {
-        setGallery([]);
-        problems.push(reasonText(galleryRes.reason));
+      if (galleryRes.status === 'fulfilled') {
+        setGallery(galleryRes.value ?? []);
+      } else {
+        const cached = await getCachedData<GalleryItem[]>('gallery');
+        if (cached && cached.length > 0) {
+          setGallery(cached);
+        } else {
+          setGallery([]);
+          problems.push(reasonText(galleryRes.reason));
+        }
       }
 
       if (problems.length) {
